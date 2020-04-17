@@ -7,6 +7,7 @@ using Microsoft.SharePoint.Client;
 using SP = Microsoft.SharePoint.Client;        
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.SharePoint;
 
 
 namespace HMDSharepointChecker
@@ -28,10 +29,12 @@ namespace HMDSharepointChecker
 
             // Get the 'Digitisation Workflow' list contents:
             var DigitisationWorkflowTitles = GetSharePointListTitles(spURL, "Digitisation Workflow");
-            Assert.IsTrue(DigitisationWorkflowTitles.Count != 0);
-            
-            
-            
+            Assert.IsNotNull(DigitisationWorkflowTitles.Count);
+
+            // Get the contents of the "Title" column in the 'Digitisation Workflow' list
+            var DigitisationWorkflowTitleContent = GetSharePointListTitleContents(spURL, "Digitisation Workflow", "Shelfmark","Title");
+            Assert.IsNotNull(DigitisationWorkflowTitleContent.Count);
+
             return;
         }
 
@@ -131,54 +134,6 @@ namespace HMDSharepointChecker
                     }
 
                     return listColumns;
-
-                    /*
-                    View view = oList.Views.GetByTitle("All Items");
-                    clientContext.Load(view);
-                    clientContext.ExecuteQuery();
-
-
-                    // Create a new CAML query object and store the query from the custom view
-                    CamlQuery query = new CamlQuery();
-                    query.ViewXml = view.ViewQuery;
-
-                    // Based on the query load the items
-
-
-                    ListItemCollection items = oList.GetItems(query);
-                    clientContext.Load(items);
-                    clientContext.ExecuteQuery();
-                    Console.Write(items.Count);
-                    var noItems = items.Count;
-
-                    List<string> listItems = new List<string>();
-
-                    foreach (var item in items)
-                    {
-                        var thisItemTitle = item["Title"];
-                        listItems.Add(item["Title"].ToString());
-                    }
-                    return listItems;
-                    */
-
-                    /// first thing I commented out
-
-                    /*
-                    // use undefined camlQuery to get all list items
-                    ListItemCollection collListItem = oList.GetItems(camlQuery);
-                    clientContext.Load(collListItem);
-                    clientContext.ExecuteQuery();
-
-                    List<string> listItems = new List<string>();
-                    foreach (ListItem oListItem in collListItem)
-                    {
-
-                        Console.WriteLine("ID: {0} \nTitle: {1} \nBody: {2}", oListItem.Id, oListItem["Title"], oListItem["Body"]);
-                        listItems.Add(oListItem["Title"].ToString());
-                    }
-                    return listItems;
-
-                    */
                 }
                 else
                 {
@@ -187,6 +142,68 @@ namespace HMDSharepointChecker
             }
             catch
             {
+                return null;
+            }
+        }
+
+        private static List<String> GetSharePointListTitleContents(string sURL, string lName, string tName, string iTName)
+        {
+            var myID = "";
+            var myTitle = "";
+            var myLoc = "";
+
+            try
+            {
+
+                ClientContext clientContext = new ClientContext(sURL);
+                SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
+                //CamlQuery camlQuery = new CamlQuery();
+                //camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
+                SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+
+                clientContext.Load(oList);
+                clientContext.Load(oItems);
+                clientContext.ExecuteQuery();
+
+                List<string> listRows = new List<string>();
+
+
+                foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
+                {
+
+                    var itemID = oListItem.FieldValues["ID"].ToString();
+                    var itemTitle = oListItem.FieldValues["Title"].ToString();
+                    var itemLocation = "";
+                    try
+                    {
+                        itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
+                    }
+
+                    catch
+                    {
+                        continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
+                    }
+                    if (itemLocation != null)
+                    {
+                        String rowString = String.Format("ID: {0} \t Title: {1} \t Location: {2}", itemID, itemTitle, itemLocation);
+                        myID = itemID;
+                        myTitle = itemTitle;
+                        myLoc = itemLocation;
+                        Console.WriteLine(rowString);
+                        listRows.Add(rowString);
+
+                    }
+                    
+                }
+
+                return listRows;
+
+            }
+            catch
+            {
+                var theID = myID;
+                var theTitle = myTitle;
+                var theLoc = myLoc;
                 return null;
             }
         }
