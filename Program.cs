@@ -278,6 +278,7 @@ namespace HMDSharepointChecker
                     itemStatus.Add(Shelfmark);
                     itemStatus.Add(sourceFolder);
                     itemStatus.Add(folderStatus);
+                    itemStatus.Add(altDirectoryExists.ToString());
 
                     folderExistenceStatus.Add(itemStatus);
                     }
