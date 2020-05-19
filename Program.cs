@@ -12,7 +12,27 @@ namespace HMDSharepointChecker
     {
         static void Main(string[] args)
         {
-            var spURL = "http://hmd.sharepoint.ad.bl.uk";
+
+            // Set the environment
+            var environment = "test";
+            var spURL = "";
+
+            if (environment == "prod")
+            {
+                spURL = "http://hmd.sharepoint.ad.bl.uk";
+            }
+
+            else if (environment == "test")
+            {
+                spURL = "http://v12t-sp13wfe1:88/";
+
+            }
+
+            // Start off just testing if things pass imaging and conservation stages
+
+            // Imaging Status = Complete
+
+
 
             // Tests that you can retrieve a tile from the sharepoint site
             Assert.IsTrue(SharepointTools.SharepointSiteExists(spURL));
@@ -34,8 +54,20 @@ namespace HMDSharepointChecker
             var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
             Assert.IsNotNull(SourceFolderStatus.Count);
 
+            Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus,"sourceFolderStatus"));
 
-            Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus));
+            //Getting & writing out the XML is currently broken, swing back around and fix this (takes hours)
+            //var sourceFolderXMLFiles = SharepointTools.GetSourceFolderXMLs(SourceFolderStatus, true);
+            //Assert.IsNotNull(sourceFolderXMLFiles);
+            // Assert.IsTrue(TextOutputFunctions.OutputListOfLists(sourceFolderXMLFiles, "xmlFilesFound"));
+
+
+            // Get the image order spreadsheet
+            var allShelfmarkFiles = InputOrderSpreadsheetTools.getAllShelfmarkTIFs(SourceFolderStatus);
+            Assert.IsNotNull(allShelfmarkFiles);
+
+            Assert.IsTrue(InputOrderSpreadsheetTools.RetrieveImgOrderLabels(allShelfmarkFiles));
+
 
 
             return;

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Net;
 using Microsoft.SharePoint.Client;
 using SP = Microsoft.SharePoint.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace HMDSharepointChecker
 {
     public class SharepointTools
@@ -21,9 +20,14 @@ namespace HMDSharepointChecker
                 var siteTitle = site.Title;
                 return !string.IsNullOrEmpty(siteTitle);
 
+
+
+
             }
-            catch
+            catch(Exception ex)
             {
+                Console.WriteLine("Custom Error Text " + ex.Message);
+
                 // Any exception returns false
                 return false;
             }
@@ -131,9 +135,15 @@ namespace HMDSharepointChecker
 
                 ClientContext clientContext = new ClientContext(sURL);
                 SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
-                //CamlQuery camlQuery = new CamlQuery();
-                //camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
-                SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+                
+                CamlQuery camlQuery = new CamlQuery();
+                // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
+                
+                camlQuery.ViewXml = "<Where><Contains><FieldRef Name = 'pSIP_x0020_Generation_x0020_Calc'/><Value Type = 'Text'>1</Value></Contains></Where>";
+
+
+                //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+                SP.ListItemCollection oItems = oList.GetItems(camlQuery);
 
                 clientContext.Load(oList);
                 clientContext.Load(oItems);
@@ -146,7 +156,7 @@ namespace HMDSharepointChecker
                 foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
                 {
                     List<string> listItem = new List<string>();
-
+                    
                     var itemID = oListItem.FieldValues["ID"].ToString();
                     var itemTitle = oListItem.FieldValues["Title"].ToString();
                     var itemLocation = "";
@@ -165,7 +175,7 @@ namespace HMDSharepointChecker
                         myID = itemID;
                         myTitle = itemTitle;
                         myLoc = itemLocation;
-                        //Console.WriteLine(rowString);
+                        Console.WriteLine(rowString);
                         listItem.Add(myID);
                         listItem.Add(myTitle);
                         listItem.Add(myLoc);
@@ -197,12 +207,16 @@ namespace HMDSharepointChecker
 
             List<List<String>> folderExistenceStatus = new List<List<String>>();
             List<String> fESTitles = new List<String>();
+
+
             fESTitles.Add("ID");
             fESTitles.Add("Shelfmark");
             fESTitles.Add("Source Folder");
             fESTitles.Add("Directory Status");
             fESTitles.Add("Alt-Directory Status");
             fESTitles.Add("Source Folder Error");
+            fESTitles.Add("Full Source Folder Path");
+
             folderExistenceStatus.Add(fESTitles); // Add the titles list as the first item in the list of lists
 
             foreach (var item in itemList)
@@ -214,6 +228,10 @@ namespace HMDSharepointChecker
 
                 //Console.WriteLine("{0} \t {1} \t {2}", item[0], item[1],item[2]);
                 string ID = item[0];
+                if(ID == "1514")
+                {
+                    Console.WriteLine("Got em!");
+                }
                 string Shelfmark = item[1];
                 string sourceFolderSP = item[2];
                 string sourceFolder = sourceFolderSP.Replace("////", "//");
@@ -246,7 +264,14 @@ namespace HMDSharepointChecker
                     else
                     {
                         altDirectoryExists = Directory.Exists(sfAlt);
-                        fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sfAlt);
+                        if (altDirectoryExists)
+                        {
+                            fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sfAlt);
+                        }
+                        else
+                        {
+                            fullSourceFolderPath = "";
+                        }
 
                         //if (DirectoryExists)
                         //{
@@ -280,6 +305,8 @@ namespace HMDSharepointChecker
                     itemStatus.Add(altDirectoryExists.ToString());
                     itemStatus.Add(checkSourceFolder.ToString());
                     itemStatus.Add(fullSourceFolderPath);
+
+
 
                 }
                 catch
@@ -345,7 +372,54 @@ namespace HMDSharepointChecker
             return fullPath;
         }
 
+        private static List<String> GetListOfXMLs(string sF, bool recursive)
+        {
+            String searchFolder = sF;
+            var filters = new String[] { "xml" };
+            string[]files = DirectorySearchTools.GetFilesFrom(searchFolder, filters, recursive);
+            List<string> listFiles = new List<string>(files);
 
+            return listFiles;
+        }
+
+        public static List<List<String>> GetSourceFolderXMLs(List<List<String>> sfStatus, bool recursive)
+        {
+            List<List<String>> sourceFolderXMLs = new List<List<String>>();
+            for (int i = 1; i < sfStatus.Count; i++)
+            {
+                List<String> item = sfStatus[i];
+                foreach (var field in item)
+                {
+                    var whatIsThis = field;
+                }
+                var shelfmark = item[1];
+                string sourceFolder = "";
+                if (string.IsNullOrEmpty(item[6]))
+                {
+                    sourceFolder = item[2];
+                }
+                else
+                {
+                    sourceFolder = item[6];
+                }
+                
+
+                List<String> xmlList = new List<String>();
+                try
+                {
+                    xmlList = GetListOfXMLs(sourceFolder, recursive);
+                }
+                catch
+                {
+                    xmlList = null;
+
+                }
+
+                sourceFolderXMLs.Add(xmlList);
+            }
+
+                return sourceFolderXMLs;
+        }
     }
 
 

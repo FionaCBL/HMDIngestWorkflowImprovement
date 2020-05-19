@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29519.181
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMDSharepointChecker", "HMDSharepointChecker.csproj", "{70557964-BE24-49C7-B898-AFB54062AD87}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HMDSharepointChecker", "HMDSharepointChecker.csproj", "{70557964-BE24-49C7-B898-AFB54062AD87}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMDSharepointTests", "..\HMDSharepointTests\HMDSharepointTests.csproj", "{A98C288F-18FB-4D10-8578-C46E5E09EA29}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{70557964-BE24-49C7-B898-AFB54062AD87}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70557964-BE24-49C7-B898-AFB54062AD87}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70557964-BE24-49C7-B898-AFB54062AD87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A98C288F-18FB-4D10-8578-C46E5E09EA29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A98C288F-18FB-4D10-8578-C46E5E09EA29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A98C288F-18FB-4D10-8578-C46E5E09EA29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A98C288F-18FB-4D10-8578-C46E5E09EA29}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
