@@ -228,10 +228,6 @@ namespace HMDSharepointChecker
 
                 //Console.WriteLine("{0} \t {1} \t {2}", item[0], item[1],item[2]);
                 string ID = item[0];
-                if(ID == "1514")
-                {
-                    Console.WriteLine("Got em!");
-                }
                 string Shelfmark = item[1];
                 string sourceFolderSP = item[2];
                 string sourceFolder = sourceFolderSP.Replace("////", "//");

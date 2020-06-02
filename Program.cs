@@ -14,18 +14,25 @@ namespace HMDSharepointChecker
         {
 
             // Set the environment
-            var environment = "test";
             var spURL = "";
+            var env = "test";
 
-            if (environment == "prod")
+            Assert.IsNotNull(env);
+
+            if (env == "prod")
             {
                 spURL = "http://hmd.sharepoint.ad.bl.uk";
             }
 
-            else if (environment == "test")
+            else if (env == "test")
             {
                 spURL = "http://v12t-sp13wfe1:88/";
 
+            }
+            else
+            {
+                Console.WriteLine("You must set an environment variable.");
+                return;
             }
 
             // Start off just testing if things pass imaging and conservation stages
@@ -51,9 +58,10 @@ namespace HMDSharepointChecker
             var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListTitleContents(spURL, "Digitisation Workflow");
             Assert.IsNotNull(DigitisationWorkflow_ID_Title_SourceFolders.Count);
 
+            // At this point you could add in some filtering by shelfmark, otherwise it will return all shelfmarks
+
             var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
             Assert.IsNotNull(SourceFolderStatus.Count);
-
             Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus,"sourceFolderStatus"));
 
             //Getting & writing out the XML is currently broken, swing back around and fix this (takes hours)
@@ -61,16 +69,16 @@ namespace HMDSharepointChecker
             //Assert.IsNotNull(sourceFolderXMLFiles);
             // Assert.IsTrue(TextOutputFunctions.OutputListOfLists(sourceFolderXMLFiles, "xmlFilesFound"));
 
+            // Pass in some information wrt shelfmark and source folder status, then searches for the TIF files in each of the folders
+
 
             // Get the image order spreadsheet
-            var allShelfmarkFiles = InputOrderSpreadsheetTools.getAllShelfmarkTIFs(SourceFolderStatus);
+            var allShelfmarkFiles = InputOrderSpreadsheetTools.getAllShelfmarkTIFs(SourceFolderStatus,env);
             Assert.IsNotNull(allShelfmarkFiles);
 
-            Assert.IsTrue(InputOrderSpreadsheetTools.RetrieveImgOrderLabels(allShelfmarkFiles));
+            Assert.IsTrue(InputOrderSpreadsheetTools.RetrieveImgOrderLabels(allShelfmarkFiles,env));
 
-
-
-            return;
+            return;            
         }
 
     }

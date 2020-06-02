@@ -9,7 +9,7 @@ namespace HMDSharepointChecker
 {
     class InputOrderSpreadsheetTools
     {
-        public static List<List<String>> getAllShelfmarkTIFs(List<List<String>> sharepointOut)
+        public static List<List<String>> getAllShelfmarkTIFs(List<List<String>> sharepointOut, String env)
         {
             bool fError = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
@@ -125,8 +125,15 @@ namespace HMDSharepointChecker
                         shelfmarkTIFs.Add(shelfmark);
 
                         List<List<String>> shelfmarkLabels = mapFileNameToLabels(Files);
+                        // shelfmarkLabels contains 
+                        //[0]: filename
+                        //[1]: flagStatus
+                        //[2]: objectType
+                        //[3]: label
+                        //[4]: order number
 
-
+                        // Now write this to a CSV
+                        Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels));
 
                     }// if validPath == true
 
@@ -197,8 +204,8 @@ namespace HMDSharepointChecker
             var endFlysheetsRegex = new Regex(@"(.)+((fse)[0-9] +[rv])\.tif", RegexOptions.IgnoreCase);
             var initialEndFlysheetsRegex = new Regex(@"(.)+((fse)[0-9]+(.)+)\.tif", RegexOptions.IgnoreCase);
 
-            var endMatterRegex = new Regex(@"(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
-            var initialEndMatterRegex = new Regex(@"(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
+            var endMatterRegex = new Regex(@"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
+            var initialEndMatterRegex = new Regex(@"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
             // Sort into front matter, end flysheets, end matter and folios
 
             // Candidates for each section:
@@ -216,77 +223,329 @@ namespace HMDSharepointChecker
             if (cFrontMatter.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
             {
                 // you can be pretty sure its DIPs compliant if you see any titles or any numbered folios
-                foreach (string fname in cFrontMatter)
-                {
-                    List<String> fmat = new List<String>();
-                    var match = Regex.Match(fname, @"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+[rv]))\.tif",RegexOptions.IgnoreCase);
-                    if (match.Success)
-                    {
-                        fmat.Add(fname);
-                        fmat.Add("");
 
-                    }
-                    else
+                int DIPSMatches = 0;
+                bool FMExists = false;
+                bool FOLExists = false;
+                bool EFSExists = false;
+                bool EMExists = false;
+                if (cFrontMatter.Any())
+                {
+                    DIPSMatches += 1;
+                    FMExists = true;
+                    foreach (string fname in cFrontMatter)
                     {
-                        string errString = "Unexpected characters in filename. Flag for investigation";
-                        fmat.Add(fname);
-                        fmat.Add(errString);
+                        List<String> fmat = new List<String>();
+                        var match = Regex.Match(fname, @"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+[rv]))\.tif", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            fmat.Add(fname);
+                            var fblefr = Regex.Match(fname, @"(.)+(fblefr)\.tif", RegexOptions.IgnoreCase).Success;
+                            var fblefv = Regex.Match(fname, @"(.)+(fblefv)\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsr = Regex.Match(fname, @"(.)+((fs)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsv = Regex.Match(fname, @"(.)+((fs)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
+                            if (fblefr)
+                            {
+                                fmat.Add("");
+                                fmat.Add("cover");
+                                fmat.Add("front cover");
+                            }
+                            else if (fblefv)
+                            {
+                                fmat.Add("");
+                                fmat.Add("cover");
+                                fmat.Add("front cover inside");
+                            }
+                            else if(fsr)
+                            {
+                                fmat.Add("");
+                                fmat.Add("flysheet");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f','s');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string flysheetLabelString = "front flysheet" + noZerosName;
+                                fmat.Add(flysheetLabelString);
+                            }
+                            else if (fsv)
+                            {
+                                fmat.Add("");
+                                fmat.Add("flysheet");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f','s');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string flysheetLabelString = "front flysheet " + noZerosName;
+                                fmat.Add(flysheetLabelString);
+                            }
+                            else
+                            {
+                                Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                fmat.Add(errString);
+                                fmat.Add("page");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                fmat.Add(derivedFilename);
+
+                            }
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            fmat.Add(fname);
+                            fmat.Add(errString);
+                            fmat.Add("page");
+                            string[] split = fname.Split('.');
+                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                            string fileExtension = split.Last(); // tif
+                            string[] split2 = shelfmark_filename.Split('_');
+                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                            string derivedFilename = split2.Last();
+                            fmat.Add("derivedFilename");
+
+                        }
+                        frontMatter.Add(fmat);
                     }
-                    frontMatter.Add(fmat);
                 }
-                foreach (string fname in cFolios)
+                if (cFolios.Any())
                 {
-                    List<String> fols = new List<String>();
-                    var match = Regex.Match(fname, @"(.)+(f)([0-9])+([rv])\.tif", RegexOptions.IgnoreCase);
-                    if (match.Success)
+                    FOLExists = true;
+                    DIPSMatches += 1;
+                    foreach (string fname in cFolios)
                     {
-                        fols.Add(fname);
-                        fols.Add("");
+                        List<String> fols = new List<String>();
+                        var match = Regex.Match(fname, @"(.)+(f)([0-9])+([rv])\.tif", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                          
+                            fols.Add(fname);
+                            var fr = Regex.Match(fname, @"(.)+((f)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fv = Regex.Match(fname, @"(.)+((f)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
 
+                            if (fr)
+                            {
+                                fols.Add("");
+                                fols.Add("page");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string frString = "folio " + noZerosName;
+                                fols.Add(frString);
+                                
+                            }
+                            else if (fv)
+                            {
+                                fols.Add(""); 
+                                fols.Add("page");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string frString = "folio " + noZerosName;
+                                fols.Add(frString);
+                            }
+                            else
+                            {
+                                Console.WriteLine("ERROR: Folio outside of common DIPS string range. Investigate");
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                fols.Add(errString);
+                                fols.Add("page");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                fols.Add(derivedFilename);
+                            }
+
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            fols.Add(fname);
+                            fols.Add(errString);
+                            fols.Add("page");
+                            string[] split = fname.Split('.');
+                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                            string fileExtension = split.Last(); // tif
+                            string[] split2 = shelfmark_filename.Split('_');
+                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                            string derivedFilename = split2.Last();
+                            fols.Add(derivedFilename);
+
+                        }
+                        folios.Add(fols);
                     }
-                    else
-                    {
-                        string errString = "Unexpected characters in filename. Flag for investigation";
-                        fols.Add(fname);
-                        fols.Add(errString);
-                    }
-                    folios.Add(fols);
                 }
-                foreach (string fname in cEndFlysheets)
+                if (cEndFlysheets.Any())
                 {
-                    List<String> efs = new List<String>();
-                    var match = Regex.Match(fname, @"(.)+((fse)[0-9] +[rv])\.tif", RegexOptions.IgnoreCase);
-                    if (match.Success)
+                    EFSExists = true;
+                    DIPSMatches += 1;
+                    foreach (string fname in cEndFlysheets)
                     {
-                        efs.Add(fname);
-                        efs.Add("");
+                        List<String> efs = new List<String>();
+                        var match = Regex.Match(fname, @"(.)+((fse)[0-9] +[rv])\.tif", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            efs.Add(fname);
+                            var fser = Regex.Match(fname, @"(.)+((fse)[0-9] +[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsev = Regex.Match(fname, @"(.)+((fse)[0-9] +[v])\.tif", RegexOptions.IgnoreCase).Success;
+                            if (fser)
+                            {
+                                efs.Add(""); // error string
+                                efs.Add("flysheet");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f','s','e');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string frString = "back flysheet " + noZerosName;
+                                efs.Add(frString);
+                            }
+                            else if (fsev)
+                            {
+                                efs.Add(""); // error string
+                                efs.Add("flysheet");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                string trimmedName = derivedFilename.Trim('f','s','e');
+                                string noZerosName = trimmedName.TrimStart('0');
+                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                string frString = "back flysheet " + noZerosName;
+                                efs.Add(frString);
+                            }
+                            else
+                            {
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                efs.Add(errString); // error string
+                                efs.Add("flysheet");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                efs.Add(derivedFilename);
+                            }
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            efs.Add(fname);
+                            efs.Add(errString);
+                            efs.Add("page");
+                            string[] split = fname.Split('.');
+                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                            string fileExtension = split.Last(); // tif
+                            string[] split2 = shelfmark_filename.Split('_');
+                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                            string derivedFilename = split2.Last();
+                            efs.Add(derivedFilename);
 
+                        }
+                        endFlysheets.Add(efs);
                     }
-                    else
-                    {
-                        string errString = "Unexpected characters in filename. Flag for investigation";
-                        efs.Add(fname);
-                        efs.Add(errString);
-                    }
-                    endFlysheets.Add(efs);
                 }
-                foreach (string fname in cEndMatter)
+                if (cEndMatter.Any())
                 {
-                    List<String> ema = new List<String>();
-                    var match = Regex.Match(fname, @"(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
-                    if (match.Success)
+                    EMExists = true;
+                    DIPSMatches += 1;
+                    foreach (string fname in cEndMatter)
                     {
-                        ema.Add(fname);
-                        ema.Add("");
+                        List<String> ema = new List<String>();
+                        var match = Regex.Match(fname, @"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            ema.Add(fname);
+                            var fbrigr = Regex.Match(fname, @"(.)+(fbrigr)\.tif", RegexOptions.IgnoreCase).Success;
+                            var fbrigv = Regex.Match(fname, @"(.)+(fbrigv)\.tif", RegexOptions.IgnoreCase).Success;
+                            var fbspi = Regex.Match(fname, @"(.)+(fbspi)\.tif", RegexOptions.IgnoreCase).Success;
 
+                            if (fbrigr)
+                            {
+                                ema.Add("");
+                                ema.Add("cover");
+                                ema.Add("back cover inside");
+                            }
+                            else if (fbrigv)
+                            {
+                                ema.Add("");
+                                ema.Add("cover");
+                                ema.Add("back cover");
+                            }
+                            else if (fbspi)
+                            {
+                                ema.Add("");
+                                ema.Add("cover");
+                                ema.Add("spine");
+                            }
+                            else // no match for any of these 'usual' cases
+                            {
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                ema.Add(errString);
+                                ema.Add("page");
+                                string[] split = fname.Split('.');
+                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                                string fileExtension = split.Last(); // tif
+                                string[] split2 = shelfmark_filename.Split('_');
+                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                string derivedFilename = split2.Last();
+                                ema.Add(derivedFilename);
+                            }
+
+
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            ema.Add(fname);
+                            ema.Add(errString);
+                            ema.Add("page");
+                            string[] split = fname.Split('.');
+                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                            string fileExtension = split.Last(); // tif
+                            string[] split2 = shelfmark_filename.Split('_');
+                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                            string derivedFilename = split2.Last();
+                            ema.Add(derivedFilename);
+                        }
+                        endMatter.Add(ema);
                     }
-                    else
-                    {
-                        string errString = "Unexpected characters in filename. Flag for investigation";
-                        ema.Add(fname);
-                        ema.Add(errString);
-                    }
-                    endMatter.Add(ema);
                 }
                 // check for anything else that passed through that failed the above checks
 
@@ -295,7 +554,13 @@ namespace HMDSharepointChecker
                 endFlysheets.Sort((a, b) => a[0].CompareTo(b[0]));
                 endMatter.Sort((a, b) => a[0].CompareTo(b[0]));
 
-
+                if (DIPSMatches < 3 | (DIPSMatches == 3 && EFSExists))// if dips frontmatter and endmatter are found but no folios, then dipsmatches = 2 - BAD
+                                                                     // if front matter, folios + endmatter found (might not be any flysheets) dipsmatches = 3 FINE
+                                                                     // if DIPSMatches ==3 and end flysheets exist, one of folios, frontmatter or endmatter isn't dips compliant and we should flag 
+                {
+                    List<string> errorFlag = new List<string> { "Mixture of DIPS-compliant and non-compliant filenames in this shelfmark!" };
+                    allFilesSorted.Add(errorFlag);
+                }
 
                 foreach (List<String> fmList in frontMatter)
                 {
@@ -316,21 +581,55 @@ namespace HMDSharepointChecker
 
 
             } // if DIPs compliant
-            else
+            else // is fully non-DIPS compliant and just has numerical filenames, so just sort this normally
             {
                List<String> sortedFilenames = fileNames.OrderBy(x => x).Select(x => x.ToString()).ToList();
                 foreach (var sfn in sortedFilenames)
                 {
                     List<String> nums = new List<String>();
                     nums.Add(sfn);
-                    nums.Add("");
+                    nums.Add(""); // errorString
+                    nums.Add("page");
+                    string[] split = sfn.Split('.');
+                    string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                    string fileExtension = split.Last(); // tif
+                    string[] split2 = shelfmark_filename.Split('_');
+                    string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                    string derivedFilename = split2.Last();
+                    string noZerosName = derivedFilename.TrimStart('0');
+                    noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                    nums.Add(noZerosName); // just get the number from the filename
+
                     allFilesSorted.Add(nums);
                 }
             }
 
+            // At this stage you have allFilesSorted as a list-of-lists with
+           // filename , flagStatus, objectType, Label 
+           //- flagStatus is a string that is either empty (all good!) or contains an error message
+           // objectType is jut page, cover, flysheet etc
+           // label is "back cover inside", "folio 5v" etc
+           for(int i = 0; i<allFilesSorted.Count; i++)
+            {
+                string orderNumber = (i + 1).ToString();
+                allFilesSorted[i].Add(orderNumber);
+                
+
+            }
+
+           // now allFilesSorted contains 
+           //[0]: filename
+           //[1]: flagStatus
+           //[2]: objectType
+           //[3]: label
+           //[4]: order number
+
+            // Should just create a file label class... to-do!
+
+            // Still need to check if image file names have consecutive numbering
+
+            // Option for just doing the regex on the list instead:
             /*
-
-
             List<string> frontMatter = fileNames.Where(f => frontMatterRegex.IsMatch(f)).ToList();
             List<string> endFlysheets = fileNames.Where(f => endFlysheetsRegex.IsMatch(f)).ToList();
             List<string> endMatter = fileNames.Where(f => endMatterRegex.IsMatch(f)).ToList();
@@ -350,99 +649,111 @@ namespace HMDSharepointChecker
                 allFilesSorted = fileNames.OrderBy(x => x).ToList();
             }
             int counter = 1;
-            
             */
-
-            /*
-            foreach (var file in Files)
-            {
-                string order = "";
-                string type = "";
-                string label = "";
-                bool flag = false;
-
-                string s = file.Name;
-                shelfmarkLabels.Add(s);
-                Console.WriteLine(s);
-                string[] split = s.Split('.');
-                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                string fileExtension = split.Last(); // tif
-                string[] split2 = shelfmark_filename.Split('_');
-                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                string derivedFilename = split2.Last();
-
-                // Now need to build a map of file names to file labels
-
-                bool isEndMatter = endNames.Any(x => derivedFilename.Contains(x));
-                bool isFrontMatter = frontNames.Any(x => derivedFilename.Contains(x));
-
-                if (isEndMatter)
-                {
-
-                    endMatter.Add(file.Name);
-
-
-                }
-                else if (isFrontMatter)
-                {
-                    frontMatter.Add(file.Name)
-                }
-                else // should just be folios left, but check
-                {
-                    var folioRegex = new Regex(@"(f)([0-9])+([rv])\.tif$",RegexOptions.IgnoreCase);
-                    List<string> resultList = derivedFilename.Where(folioRegex.IsMatch).ToList();
-
-                }
-
-                // Use a separate function
-                foreach (KeyValuePair<string, string> entry in order_map) // check if any matches from dict
-                {
-
-                    if (derivedFilename.Contains(entry.Key))
-                    {
-                        order = entry.Value;
-                    }
-
-                } // end of dict loop
-
-                shelfmarkLabels.Add(order);
-                shelfmarkLabels.Add(type);
-                shelfmarkLabels.Add(label);
-
-            }
-        */
 
             return allFilesSorted;
         }
 
 
-        public static bool RetrieveImgOrderLabels(List<List<String>> allShelfmarkFiles)
+        public static bool RetrieveImgOrderLabels(List<List<String>> allShelfmarkFiles, String env)
         {
             bool fError = false;
 
-            foreach (List<String> shelfmarkFiles in allShelfmarkFiles)
+            if (env == "test")
             {
-                string filePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                filePath += @"\HMDSharepoint_ImgOrderTest\";
-                string SM_folderFormat = shelfmarkFiles[0].ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
-                filePath += SM_folderFormat;
-
-                if (!Directory.Exists(filePath))
+                try
                 {
+                    foreach (List<String> shelfmarkFiles in allShelfmarkFiles)
+                    {
+                        // ======================== this block is just used for testing locally =====================
 
+                        string filePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                        filePath += @"\HMDSharepoint_ImgOrderTest\";
+                        string SM_folderFormat = shelfmarkFiles[0].ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        filePath += SM_folderFormat;
 
-                    Directory.CreateDirectory(filePath);
+                        if (!Directory.Exists(filePath))
+                        {
+                            Directory.CreateDirectory(filePath);
+                        }
+                        // ===============================================================
+                        foreach (var thing in shelfmarkFiles)
+                        {
+                            // Create a directory on the user's desktop if it doesn't already exist
+
+                            Console.WriteLine("{0}", thing);
+                        }
+                    }
                 }
-
-                foreach (var thing in shelfmarkFiles)
+                catch(Exception ex)
                 {
-                    // Create a directory on the user's desktop if it doesn't already exist
-
-                    Console.WriteLine("{0}", thing);
+                    Console.WriteLine("ERROR: {0}", ex);
+                    fError = true;
+                    return !fError;
                 }
+                   
+            }
+            else if(env == "prod")
+            {
+                //do whatever you'd want to do in prod - we're only at test for now
+            }
+            else // env is ill-defined
+            {
+                fError = true;
             }
 
 
+            return !fError;
+        }
+
+        private static bool writeFileLabelsToCSV(List<List<String>> allShelfmarkFiles)
+        {
+            bool fError = false;
+
+            try // to write the csv...
+            {
+                const char sep = ',';
+                List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
+                System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
+                using (var sr = new StreamWriter("test.txt", false, uce))
+                {
+                    using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
+                    {
+                        foreach (var header in strHeaders)
+                        {
+                            csvFile.WriteField(header);
+                        }
+                        csvFile.NextRecord(); // should skip over header?
+                        foreach (var record in allShelfmarkFiles)
+                        {
+                            for (int i = 0; i < record.Count; i++)
+                            {
+                                // now allFilesSorted contains 
+                                //[0]: filename
+                                //[1]: flagStatus
+                                //[2]: objectType
+                                //[3]: label
+                                //[4]: order number
+                                csvFile.WriteField(record[0]); // filename
+                                csvFile.WriteField(record[4]); // order number
+                                csvFile.WriteField(record[2]); // object type
+                                csvFile.WriteField(record[3]); // label
+                                csvFile.WriteField(record[1]); // error flag status
+                            }
+                            if (allShelfmarkFiles.IndexOf(record) != allShelfmarkFiles.Count - 1)
+                            {
+                                csvFile.NextRecord();
+                            }
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing CSV File: {0}", ex);
+                fError = true;
+            }
             return !fError;
         }
     }
