@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Net;
+using System.Linq;
 using Microsoft.SharePoint.Client;
 using SP = Microsoft.SharePoint.Client;
 namespace HMDSharepointChecker
@@ -24,11 +24,12 @@ namespace HMDSharepointChecker
 
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Custom Error Text " + ex.Message);
 
                 // Any exception returns false
+
                 return false;
             }
 
@@ -102,8 +103,7 @@ namespace HMDSharepointChecker
                     {
 
                         var thingToPrint = myField.Title + ", " + myField.InternalName;
-                        //Console.WriteLine(myField.Title);
-                        //Console.WriteLine(thingToPrint);
+                        Console.WriteLine(thingToPrint); // print this to get the internal name of columns
 
                         listColumns.Add(myField.Title);
 
@@ -124,77 +124,176 @@ namespace HMDSharepointChecker
 
 
 
-        public static List<List<String>> GetSharePointListTitleContents(string sURL, string lName)
+        public static List<List<String>> GetSharePointListTitleContents(string sURL, string lName, string env, string project)
         {
             var myID = "";
             var myTitle = "";
             var myLoc = "";
-
-            try
+            if (env == "test")
             {
+                try
+                {
 
-                ClientContext clientContext = new ClientContext(sURL);
-                SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
-                
+                    ClientContext clientContext = new ClientContext(sURL);
+                    SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
+
+                    /*
                 CamlQuery camlQuery = new CamlQuery();
-                // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
-                
-                camlQuery.ViewXml = "<Where><Contains><FieldRef Name = 'pSIP_x0020_Generation_x0020_Calc'/><Value Type = 'Text'>1</Value></Contains></Where>";
+                    // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
+
+                    // testing by project in the 'test' env
+                    //camlQuery.ViewXml = "<View Scope='RecursiveAll'><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>Zoro</Value></Contains></Where></Query></View>";
+                    
+                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Project'/><Value Type = 'Text'>Zoro</Value></Contains></Where>";
+
+                    Console.WriteLine("CAMLQuery: {0}", camlQuery.ViewXml);
 
 
+                    // for all items:
                 //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+                // for your query:
                 SP.ListItemCollection oItems = oList.GetItems(camlQuery);
 
                 clientContext.Load(oList);
                 clientContext.Load(oItems);
                 clientContext.ExecuteQuery();
+                */
+
+                    CamlQuery camlQuery = new CamlQuery();
+                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>Zoro</Value></Contains></Where></Query></View>";
+                    ListItemCollection oItems = oList.GetItems(camlQuery);
+                    //clientContext.Load(oItems,
+                    //items => items.Include(
+                    //      item => item.Id,
+                    //     item => item.DisplayName,
+                    //     item => item.HasUniqueRoleAssignments));
+                    clientContext.Load(oItems);
+
+                    clientContext.ExecuteQuery();
 
 
 
-                List<List<string>> listAll = new List<List<string>>();
 
-                foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
-                {
-                    List<string> listItem = new List<string>();
-                    
-                    var itemID = oListItem.FieldValues["ID"].ToString();
-                    var itemTitle = oListItem.FieldValues["Title"].ToString();
-                    var itemLocation = "";
-                    try
+                    List<List<string>> listAll = new List<List<string>>();
+
+                    foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
                     {
-                        itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
+                        List<string> listItem = new List<string>();
+
+                        var itemID = oListItem.FieldValues["ID"].ToString();
+                        var itemTitle = oListItem.FieldValues["Title"].ToString();
+
+                        var itemLocation = "";
+                        try
+                        {
+                            itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
+                        }
+
+                        catch
+                        {
+                            continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
+                        }
+                        if (itemLocation != null)
+                        {
+                            String rowString = String.Format("ID: {0} \t Project: {1} \t Title: {2} \t Location: {3}", itemID, oListItem.FieldValues["Project_x0020_Name"].ToString(), itemTitle, itemLocation);
+                            myID = itemID;
+                            myTitle = itemTitle;
+                            myLoc = itemLocation;
+                            Console.WriteLine(rowString);
+                            listItem.Add(myID);
+                            listItem.Add(myTitle);
+                            listItem.Add(myLoc);
+
+                        }
+                        listAll.Add(listItem);
                     }
 
-                    catch
-                    {
-                        continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
-                    }
-                    if (itemLocation != null)
-                    {
-                        String rowString = String.Format("ID: {0} \t Title: {1} \t Location: {2}", itemID, itemTitle, itemLocation);
-                        myID = itemID;
-                        myTitle = itemTitle;
-                        myLoc = itemLocation;
-                        Console.WriteLine(rowString);
-                        listItem.Add(myID);
-                        listItem.Add(myTitle);
-                        listItem.Add(myLoc);
+                    return listAll;
 
-                    }
-                    listAll.Add(listItem);
                 }
-
-                return listAll;
-
+                catch
+                {
+                    var theID = myID;
+                    var theTitle = myTitle;
+                    var theLoc = myLoc;
+                    return null;
+                }
             }
-            catch
+            else if (env == "prod")
             {
-                var theID = myID;
-                var theTitle = myTitle;
-                var theLoc = myLoc;
+
+                try
+                {
+
+                    ClientContext clientContext = new ClientContext(sURL);
+                    SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
+
+                    CamlQuery camlQuery = new CamlQuery();
+                    // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
+
+                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name = 'pSIP_x0020_Generation_x0020_Calc'/><Value Type = 'Text'>1</Value></Contains></Where>";
+
+
+                    //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+                    SP.ListItemCollection oItems = oList.GetItems(camlQuery);
+
+                    clientContext.Load(oList);
+                    clientContext.Load(oItems);
+                    clientContext.ExecuteQuery();
+
+
+
+                    List<List<string>> listAll = new List<List<string>>();
+
+                    foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
+                    {
+                        List<string> listItem = new List<string>();
+
+                        var itemID = oListItem.FieldValues["ID"].ToString();
+                        var itemTitle = oListItem.FieldValues["Title"].ToString();
+                        var itemLocation = "";
+                        try
+                        {
+                            itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
+                        }
+
+                        catch
+                        {
+                            continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
+                        }
+                        if (itemLocation != null)
+                        {
+                            String rowString = String.Format("ID: {0} \t Title: {1} \t Location: {2}", itemID, itemTitle, itemLocation);
+                            myID = itemID;
+                            myTitle = itemTitle;
+                            myLoc = itemLocation;
+                            Console.WriteLine(rowString);
+                            listItem.Add(myID);
+                            listItem.Add(myTitle);
+                            listItem.Add(myLoc);
+
+                        }
+                        listAll.Add(listItem);
+                    }
+
+                    return listAll;
+
+                }
+                catch
+                {
+                    var theID = myID;
+                    var theTitle = myTitle;
+                    var theLoc = myLoc;
+                    return null;
+                }
+            }
+            else
+            {
+                Console.WriteLine("You forgot to set the environment.");
                 return null;
             }
         }
+
 
 
         public static List<List<String>> CheckSourceFolderExists(List<List<string>> itemList)
@@ -228,10 +327,6 @@ namespace HMDSharepointChecker
 
                 //Console.WriteLine("{0} \t {1} \t {2}", item[0], item[1],item[2]);
                 string ID = item[0];
-                if(ID == "1514")
-                {
-                    Console.WriteLine("Got em!");
-                }
                 string Shelfmark = item[1];
                 string sourceFolderSP = item[2];
                 string sourceFolder = sourceFolderSP.Replace("////", "//");
@@ -247,7 +342,10 @@ namespace HMDSharepointChecker
                     // Can flag this 
                     checkSourceFolder = true;
                 }
-
+                if (sourceFolder.Contains(@"%20"))
+                {
+                    sourceFolder = sourceFolder.Replace(@"%20", @" ");
+                }
 
                 var sfAlt2 = sourceFolder.Split('\\')[2]; // Get the part of the string with server name in
 
@@ -286,10 +384,10 @@ namespace HMDSharepointChecker
 
                     }
 
-                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
+                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", fullSourceFolderPath, DirectoryExists);
                     else if (altDirectoryExists)
                     {
-                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
+                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", fullSourceFolderPath, sfAlt, altDirectoryExists);
                         checkSourceFolder = true;
                     }
                     else
@@ -341,9 +439,9 @@ namespace HMDSharepointChecker
         private static String ConstructFullFolderName(string SM, string sF)
         {
             string fullPath = null;
-            string SM_folderFormat = SM.ToLower().Replace(@" ", @"_").Replace(@"/",@"!").Replace(@".",@"_");
+            string SM_folderFormat = SM.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_");
 
-            if( sF.Contains(SM_folderFormat))
+            if (sF.Contains(SM_folderFormat))
             {
                 // do nothing! this is the ideal scenario
                 fullPath = sF;
@@ -361,12 +459,12 @@ namespace HMDSharepointChecker
                 {
                     testPath = sF + @"\" + SM_folderFormat;
                 }
-                
+
                 if (Directory.Exists(testPath))
                 {
                     fullPath = testPath;
                 }
-                
+
             }
 
             return fullPath;
@@ -376,7 +474,7 @@ namespace HMDSharepointChecker
         {
             String searchFolder = sF;
             var filters = new String[] { "xml" };
-            string[]files = DirectorySearchTools.GetFilesFrom(searchFolder, filters, recursive);
+            string[] files = DirectorySearchTools.GetFilesFrom(searchFolder, filters, recursive);
             List<string> listFiles = new List<string>(files);
 
             return listFiles;
@@ -384,14 +482,11 @@ namespace HMDSharepointChecker
 
         public static List<List<String>> GetSourceFolderXMLs(List<List<String>> sfStatus, bool recursive)
         {
+            bool containsXMLs = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>();
             for (int i = 1; i < sfStatus.Count; i++)
             {
                 List<String> item = sfStatus[i];
-                foreach (var field in item)
-                {
-                    var whatIsThis = field;
-                }
                 var shelfmark = item[1];
                 string sourceFolder = "";
                 if (string.IsNullOrEmpty(item[6]))
@@ -402,27 +497,248 @@ namespace HMDSharepointChecker
                 {
                     sourceFolder = item[6];
                 }
-                
+
 
                 List<String> xmlList = new List<String>();
                 try
                 {
                     xmlList = GetListOfXMLs(sourceFolder, recursive);
+
+                    if (xmlList.Count > 0)
+                    {
+                        containsXMLs = true;
+                    }
                 }
                 catch
                 {
                     xmlList = null;
-
                 }
 
                 sourceFolderXMLs.Add(xmlList);
             }
 
-                return sourceFolderXMLs;
+            return sourceFolderXMLs;
         }
+
+        public static List<String> GetShelfmarkXMLs(String sourceFolder)
+        {
+            bool containsXMLs = false;
+            List<String> sourceFolderXMLs = new List<String>();
+
+            DirectoryInfo d = new DirectoryInfo(sourceFolder);
+            FileInfo[] Files = d.GetFiles("*.xml*");
+            List<String> XMLFiles = Files.Select(x => x.Name).ToList();
+            return XMLFiles;
+        }
+        public static bool IsInvalidFileNameChar(Char c) => c < 64U ?
+        (1UL << c & 0xD4008404FFFFFFFFUL) != 0 :
+        c == '\\' || c == '|';
+
+        public static List<String> BadShelfmarkNames(List<List<String>> itemList)
+        {
+            List<String> badShelfmarks = new List<String>();
+            bool protectedCharsFound = false;
+            foreach (var item in itemList)
+            {
+                string Shelfmark = item[1];
+                foreach (char character in Shelfmark)
+                {
+                    if (IsInvalidFileNameChar(character))
+                    {
+                        badShelfmarks.Add(Shelfmark);
+                    }
+                }
+
+            }
+            return badShelfmarks;
+        }
+
+        public static bool CreateSharepointColumn(String SPSite, String SPListName, String newCol)
+        {
+            bool fError = false;
+            bool fieldExists = false;
+            try
+            {
+                using (ClientContext clientContext = new ClientContext(SPSite))
+                {
+                    // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
+                    // This value is NOT List internal name
+                    List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                    clientContext.Load(targetList);
+                    clientContext.Load(targetList.Fields);
+                    clientContext.ExecuteQuery();
+                    for (int i = 0; i < targetList.Fields.Count; i++)
+                    {
+                        if (targetList.Fields[i].Title == newCol)
+                        {
+                            fieldExists = true;   
+                        }
+                    }
+                }
+                if (!fieldExists)
+                {
+                    using (ClientContext clientContext = new ClientContext(SPSite))
+                    {
+                        // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
+                        // This value is NOT List internal name
+                        List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                        FieldCollection collField = targetList.Fields;
+
+                        string fieldSchema = "<Field Type='Text' DisplayName='"+newCol+"' Name='"+newCol+"' />";
+                        collField.AddFieldAsXml(fieldSchema, true, AddFieldOptions.AddToDefaultContentType);
+
+                        clientContext.Load(collField);
+                        clientContext.ExecuteQuery();
+
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("The SharePoint column you're trying to add already exists!");
+                }
+                return !fError;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing new column {0}. Exception: {1}", newCol, ex);
+                fError = true;
+                return fError;
+            }
+        }
+
+        // Will delete a sharepoint column - use this sparingly!
+        public static bool DeleteSharepointColumn(String SPSite, String SPListName, String delCol)
+        {
+            bool fError = false;
+            bool fieldExists = false;
+            try
+            {
+                using (ClientContext clientContext = new ClientContext(SPSite))
+                {
+                    // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
+                    // This value is NOT List internal name
+                    List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                    clientContext.Load(targetList);
+                    clientContext.Load(targetList.Fields);
+                    clientContext.ExecuteQuery();
+                    for (int i = 0; i < targetList.Fields.Count; i++)
+                    {
+                        if (targetList.Fields[i].Title == delCol)
+                        {
+                            fieldExists = true;
+                        }
+                    }
+                }
+                if (fieldExists)
+                {
+                    using (ClientContext clientContext = new ClientContext(SPSite))
+                    {
+                        // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
+                        // This value is NOT List internal name
+                        List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+
+                        // Get field from site collection using internal name or display name
+                        Field oField = clientContext.Web.AvailableFields.GetByInternalNameOrTitle(delCol);
+
+                        // Delete field
+                        oField.DeleteObject();
+
+                        clientContext.ExecuteQuery();
+
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("The SharePoint column you're trying to delete doesn't exist!");
+                }
+                return !fError;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error deleting column {0}. Exception: {1}", delCol, ex);
+                fError = true;
+                return fError;
+            }
+        }
+        public static bool WriteToSharepointColumnByShelfmark(String SPSite, String SPListName, String writeCol, List<String> shelfmarks)
+        {
+            bool fError = false;
+
+            try
+            {
+
+                ClientContext ctx = new ClientContext(SPSite);
+                List list = ctx.Web.Lists.GetByTitle(SPListName);
+
+                foreach (String shelfmark in shelfmarks)
+                {
+
+                    CamlQuery camlQuery = new CamlQuery();
+                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
+                    ListItemCollection items = list.GetItems(camlQuery);
+                    ctx.Load(items); // loading all the fields
+                    ctx.ExecuteQuery();
+
+                    foreach (var item in items)
+                    {
+                        if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                        {
+                            item[writeCol] = "BadCharacters";
+                            item.Update(); // remember changes
+                            ctx.ExecuteQuery(); // commit changes to the server
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
+                fError = true;
+                return !fError;
+            }
+
+            return !fError;
+
+
+        }
+        public static bool WriteToSharepointColumnBySingleShelfmark(String SPSite, String SPListName, String writeCol, String shelfmark, String Message)
+        {
+            bool fError = false;
+
+            try
+            {
+
+                ClientContext ctx = new ClientContext(SPSite);
+                List list = ctx.Web.Lists.GetByTitle(SPListName);
+                CamlQuery camlQuery = new CamlQuery();
+                camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
+                ListItemCollection items = list.GetItems(camlQuery);
+                ctx.Load(items); // loading all the fields
+                ctx.ExecuteQuery();
+
+                foreach (var item in items)
+                {
+                    if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                    {
+                        item[writeCol] = Message;
+                        item.Update(); // remember changes
+                        ctx.ExecuteQuery(); // commit changes to the server
+                    }
+                    }
+                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
+                fError = true;
+                return !fError;
+            }
+
+            return !fError;
+
+
+        }
+    }
     }
 
 
-
-
-}
