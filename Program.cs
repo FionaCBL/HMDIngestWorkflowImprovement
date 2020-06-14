@@ -36,7 +36,23 @@ namespace HMDSharepointChecker
                 Console.WriteLine("You must set an environment variable.");
                 return;
             }
-            
+
+            // test a single XML version number
+            bool goodXMLVersion = false;
+            String testXMLPath = @"G:\Heritage Made Digital\05 Projects\Workflow\Validation of Ingest Workflow\Example OCR files\IOR!P!5644_Jun_1899_nos_80-92_001.xml";
+            String XMLVersionNumber = InputOrderSpreadsheetTools.GetXMLVersionNumber(testXMLPath);
+            float XMLVNum = float.Parse(XMLVersionNumber,System.Globalization.CultureInfo.InvariantCulture);
+            if (XMLVNum <= 2.0)  
+            {
+                goodXMLVersion = true;
+            }
+            Assert.IsTrue(goodXMLVersion);
+
+            // Add columns for XML checking
+            String SharePointColumnXMLCheck = "ALTOXMLCheck";
+            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
+
+
             // Test sharepoint site exists
             Assert.IsTrue(SharepointTools.SharepointSiteExists(spURL));
 
@@ -64,6 +80,20 @@ namespace HMDSharepointChecker
             Assert.IsNotNull(SourceFolderStatus.Count);
             Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus,"sourceFolderStatus"));
 
+            // Add in Shelfmark protected chars check here
+            String SharePointColumnShelfmarkCheck = "Shelfmark Check";
+            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
+
+            List<String> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
+            if (badShelfmarks.Count != 0)
+            {
+                // Write new SharePoint column if it doesn't exist...
+                
+                // now we need to write to sharepoint by shelfmark
+                Assert.IsTrue(SharepointTools.WriteToSharepointColumnByShelfmark(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, badShelfmarks));
+
+            }
+            // can write this out at the end in a little console report
 
 
             var sourceFolderXMLFiles = SharepointTools.GetSourceFolderXMLs(SourceFolderStatus, true);
@@ -78,7 +108,7 @@ namespace HMDSharepointChecker
 
 
             // Get the labels (image order, image type etc) for all shelfmarks passed into this function
-            var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus,env);
+            var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus,env, spURL,"Digitisation Workflow");
             Assert.IsNotNull(allShelfmarkFiles);
             
 

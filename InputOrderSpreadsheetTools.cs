@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -32,7 +33,7 @@ namespace HMDSharepointChecker
     {
         
 
-        public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<List<String>> sharepointOut, String env)
+        public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<List<String>> sharepointOut, String env, String spURL, String spList)
         {
             bool fError = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
@@ -126,8 +127,8 @@ namespace HMDSharepointChecker
                         //shelfmarkTIFs.Add(shelfmark); // why do you need to add the shelfmark? It should be in the filenames
                         // to-do: turn the below stuff into a class of its own
                         shelfmarkLabels = mapFileNameToLabels(Files,tifFolder);
-                        // shelfmarkLabels contains 
-
+                        // shelfmarkLabels is a list of lists
+                        // each sub-list is  for a particular file and contains:
                         //[0]: filename
                         //[1]: flagStatus
                         //[2]: objectType
@@ -137,17 +138,82 @@ namespace HMDSharepointChecker
 
                         // In production you will make outFolder equal to the tifFolder,
                         // but for now...
-                        string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                        outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
-                        string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
-                        outFolder += SM_folderFormat;
-
-                        if (!Directory.Exists(outFolder))
+                        if (env == "test") // get this going for prod by sticking it in the actual tifFolder
                         {
-                            Directory.CreateDirectory(outFolder);
-                        }                        // Now write this to a CSV
-                        // Not yet...
-                        Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels,outFolder));
+                            string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                            outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
+                            string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                            outFolder += SM_folderFormat;
+                            if (!Directory.Exists(outFolder))
+                            {
+                                Directory.CreateDirectory(outFolder);
+                            }                        // Now write this to a CSV
+                                                     
+                            Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                        }
+
+                        // SORT XML THINGS OUT HERE!
+                        bool XMLNumberMismatch = false;
+                        bool XMLNamingError = false;
+                        bool XMLDipsComplianceError = false;
+                        bool XMLVersionError = false;
+                        string xmlErrMessage = "";
+                        List<string> fileNames = Files.Select(x => x.Name).ToList();
+                        List<String> fullNames = Files.Select(x => x.FullName).ToList();
+
+                        List<String> allXMLs = SharepointTools.GetShelfmarkXMLs(tifFolder);
+                        List<String> baseFileNames = new List<String>();
+                        List<String> baseXMLNames = new List<String>();
+                        if(allXMLs.Count > 0) // otherwise don't enter this part
+                        {
+                            if(allXMLs.Count != numberOfItems)
+                            {
+                                XMLNumberMismatch = true;
+                                xmlErrMessage = "Number of XMLs not equals to number of TIFs";
+                            }
+                            foreach (String fname in fileNames)
+                            {
+                                string fnameBase = fname.Substring(0, fname.LastIndexOf('.'));
+                                baseFileNames.Add(fnameBase);
+                            }
+                            foreach(String xmlName in allXMLs)
+                            {
+                                string xmlnameBase = xmlName.Substring(0, xmlName.LastIndexOf('.'));
+                                baseXMLNames.Add(xmlnameBase);
+                                String fullXMLPath = tifFolder + @"\" + xmlName;
+                                //string lineOne = File.ReadLines(fullXMLPath).First(); // gets the first line from file.
+                                String versionNumber = GetXMLVersionNumber(fullXMLPath);
+                                float XMLVNum = float.Parse(versionNumber, System.Globalization.CultureInfo.InvariantCulture);
+                                if (XMLVNum > 2.0)
+                                {
+                                    XMLVersionError = true;
+                                    xmlErrMessage = "XML Version Error";
+
+                                }
+                            }
+                            if (!baseFileNames.SequenceEqual(baseXMLNames))
+                            {
+                                XMLNamingError = true;
+                                xmlErrMessage = "XML names not equivalent to TIF names";
+
+                            }
+
+                            if (XMLNumberMismatch | XMLNamingError | XMLDipsComplianceError | XMLVersionError)
+                            {
+                                if (env == "test")
+                                {
+                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnBySingleShelfmark(spURL, spList, "ALTOXMLCheck", shelfmark, xmlErrMessage));
+                                }
+                                else if (env == "prod")
+                                {
+                                    Console.WriteLine("Holding off on populting columns in Sharepoint prod version for now");
+                                }
+                            }
+
+
+
+                        }
+
 
                     }// if validPath == true
 
@@ -213,20 +279,6 @@ namespace HMDSharepointChecker
             List<String> shelfmarkLabels = new List<String>();
 
             List<string> fileNames = Files.Select(x => x.Name).ToList();
-
-            List<String> frontNames = new List<String>();
-            List<String> endNames = new List<String>();
-
-            // front matter
-            frontNames.Add("fblefr");
-            frontNames.Add("fblefv");
-            frontNames.Add("fs"); // adding front flysheets
-
-            // end matter
-            endNames.Add("fbspi"); // spine is always the last item?
-            endNames.Add("fbrigv"); // back cover
-            endNames.Add("fbrigr"); // back cover inside
-            endNames.Add("fse"); // end flysheets
 
             // Define regular expressions to search for
             // 'initial' versions perform a looser search
@@ -449,12 +501,12 @@ namespace HMDSharepointChecker
                     foreach (string fname in cEndFlysheets)
                     {
                         List<String> efs = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+((fse)[0-9] +[rv])\.tif", RegexOptions.IgnoreCase);
+                        var match = Regex.Match(fname, @"(.)+((fse)[0-9]+[rv])\.tif", RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
                             efs.Add(fname);
-                            var fser = Regex.Match(fname, @"(.)+((fse)[0-9] +[r])\.tif", RegexOptions.IgnoreCase).Success;
-                            var fsev = Regex.Match(fname, @"(.)+((fse)[0-9] +[v])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fser = Regex.Match(fname, @"(.)+((fse)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsev = Regex.Match(fname, @"(.)+((fse)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
                             if (fser)
                             {
                                 efs.Add(""); // error string
@@ -755,7 +807,19 @@ namespace HMDSharepointChecker
                 const char sep = ',';
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
-                string outPath = outFolder + @"\ImgOrder.csv";
+                string fNameString = "ImgOrder";
+                string outPath = outFolder + @"\"+fNameString+".csv";
+
+                if (File.Exists(outPath))
+                {
+                    var time = DateTime.Now;
+                    string formattedTime = time.ToString("yyyyMMdd_hh-mm-ss");
+                    string altOutPath = outFolder + @"\" + fNameString + "_" + formattedTime + ".csv";
+                    outPath = altOutPath;
+
+                }
+                    
+
                 using (var sr = new StreamWriter(outPath, false, uce))
                 {
                     using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
@@ -798,6 +862,14 @@ namespace HMDSharepointChecker
                 fError = true;
             }
             return !fError;
+        }
+
+        public static String GetXMLVersionNumber(String fileName)
+        {
+            XDocument doc = XDocument.Load(fileName);
+            string version = doc.Declaration.Version;
+            return version;
+
         }
     }
 }

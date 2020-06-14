@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Net;
+using System.Linq;
 using Microsoft.SharePoint.Client;
 using SP = Microsoft.SharePoint.Client;
 namespace HMDSharepointChecker
@@ -520,6 +520,38 @@ namespace HMDSharepointChecker
             return sourceFolderXMLs;
         }
 
+        public static List<String> GetShelfmarkXMLs(String sourceFolder)
+        {
+            bool containsXMLs = false;
+            List<String> sourceFolderXMLs = new List<String>();
+
+            DirectoryInfo d = new DirectoryInfo(sourceFolder);
+            FileInfo[] Files = d.GetFiles("*.xml*");
+            List<String> XMLFiles = Files.Select(x => x.Name).ToList();
+            return XMLFiles;
+        }
+        public static bool IsInvalidFileNameChar(Char c) => c < 64U ?
+        (1UL << c & 0xD4008404FFFFFFFFUL) != 0 :
+        c == '\\' || c == '|';
+
+        public static List<String> BadShelfmarkNames(List<List<String>> itemList)
+        {
+            List<String> badShelfmarks = new List<String>();
+            bool protectedCharsFound = false;
+            foreach (var item in itemList)
+            {
+                string Shelfmark = item[1];
+                foreach (char character in Shelfmark)
+                {
+                    if (IsInvalidFileNameChar(character))
+                    {
+                        badShelfmarks.Add(Shelfmark);
+                    }
+                }
+
+            }
+            return badShelfmarks;
+        }
 
         public static bool CreateSharepointColumn(String SPSite, String SPListName, String newCol)
         {
@@ -550,15 +582,14 @@ namespace HMDSharepointChecker
                         // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
                         // This value is NOT List internal name
                         List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                        FieldCollection collField = targetList.Fields;
 
-                        // Get field from site collection using internal name or display name
-                        Field oField = clientContext.Web.AvailableFields.GetByInternalNameOrTitle(newCol);
+                        string fieldSchema = "<Field Type='Text' DisplayName='"+newCol+"' Name='"+newCol+"' />";
+                        collField.AddFieldAsXml(fieldSchema, true, AddFieldOptions.AddToDefaultContentType);
 
-                        // Add field to target list
-                        targetList.Fields.Add(oField);
-
-                        targetList.Update();
+                        clientContext.Load(collField);
                         clientContext.ExecuteQuery();
+
                     }
                 }
                 else
@@ -629,16 +660,85 @@ namespace HMDSharepointChecker
                 return fError;
             }
         }
+        public static bool WriteToSharepointColumnByShelfmark(String SPSite, String SPListName, String writeCol, List<String> shelfmarks)
+        {
+            bool fError = false;
+
+            try
+            {
+
+                ClientContext ctx = new ClientContext(SPSite);
+                List list = ctx.Web.Lists.GetByTitle(SPListName);
+
+                foreach (String shelfmark in shelfmarks)
+                {
+
+                    CamlQuery camlQuery = new CamlQuery();
+                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
+                    ListItemCollection items = list.GetItems(camlQuery);
+                    ctx.Load(items); // loading all the fields
+                    ctx.ExecuteQuery();
+
+                    foreach (var item in items)
+                    {
+                        if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                        {
+                            item[writeCol] = "BadCharacters";
+                            item.Update(); // remember changes
+                            ctx.ExecuteQuery(); // commit changes to the server
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
+                fError = true;
+                return !fError;
+            }
+
+            return !fError;
 
 
+        }
+        public static bool WriteToSharepointColumnBySingleShelfmark(String SPSite, String SPListName, String writeCol, String shelfmark, String Message)
+        {
+            bool fError = false;
+
+            try
+            {
+
+                ClientContext ctx = new ClientContext(SPSite);
+                List list = ctx.Web.Lists.GetByTitle(SPListName);
+                CamlQuery camlQuery = new CamlQuery();
+                camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
+                ListItemCollection items = list.GetItems(camlQuery);
+                ctx.Load(items); // loading all the fields
+                ctx.ExecuteQuery();
+
+                foreach (var item in items)
+                {
+                    if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                    {
+                        item[writeCol] = Message;
+                        item.Update(); // remember changes
+                        ctx.ExecuteQuery(); // commit changes to the server
+                    }
+                    }
+                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
+                fError = true;
+                return !fError;
+            }
+
+            return !fError;
 
 
-
-
-
-
-
+        }
     }
-}
+    }
 
 
