@@ -7,13 +7,36 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HMDSharepointChecker
 {
+    class LabelledFile
+    {
+        public List<string> fileName = new List<String>();
+        public List<string> flagStatus = new List<String>();
+        public List<string> objectType = new List<String>();
+        public List<string> imgLabel = new List<String>();
+        public List<string> orderNumber = new List<String>();
+
+        public List<string> frontMatter = new List<String>();
+        public List<string> folios = new List<String>();
+        public List<string> endFlysheets = new List<String>();
+        public List<string> endMatter = new List<String>();
+
+        public LabelledFile()
+        { }
+
+
+
+
+    }
+
     class InputOrderSpreadsheetTools
     {
-        public static List<List<String>> getAllShelfmarkTIFs(List<List<String>> sharepointOut, String env)
+        
+
+        public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<List<String>> sharepointOut, String env)
         {
             bool fError = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
-            List<List<String>> allShelfmarkTIFs = new List<List<String>>();
+            List<List<List<String>>> allShelfmarkTIFAndLabels = new List<List<List<String>>>();
 
 
             for (int i = 1; i < sharepointOut.Count; i++) // need this to skip the first row (titles)
@@ -21,13 +44,15 @@ namespace HMDSharepointChecker
                 List<String> item = sharepointOut[i];
                 List<String> shelfmarkTIFs = new List<String>();
 
+                List<List<String>> shelfmarkLabels = new List<List<String>>();
                 bool validPath = false;
+                
                 var shelfmark = item[1];
 
                 if (item[5] != "false")
                 {
-                    var testFullName = item[6];
                     string sourceFolder = "";
+
                     if (string.IsNullOrEmpty(item[6]))
                     {
                         sourceFolder = item[2];
@@ -42,78 +67,115 @@ namespace HMDSharepointChecker
                     // this is a bit of a mess at the moment, sort this out
                     var tifFolder = "";
                     sourceFolder = sourceFolder.TrimEnd('\\');
+                    sourceFolder = sourceFolder.ToLower();
 
-                    if (sourceFolder.EndsWith("TIF"))
+                    Console.WriteLine("Source Folder: {0}", sourceFolder);
+                    try
                     {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (sourceFolder.EndsWith("tif"))
-                    {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (sourceFolder.EndsWith("tiff"))
-                    {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (sourceFolder.EndsWith("TIFF"))
-                    {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (sourceFolder.EndsWith("tiffs"))
-                    {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (sourceFolder.EndsWith("TIFFS"))
-                    {
-                        tifFolder = sourceFolder;
-                    }
-                    else if (Directory.Exists(sourceFolder + @"\" + "TIFF"))
-                    {
-                        tifFolder = sourceFolder + @"\" + "TIFF";
+                        if (sourceFolder.ToUpper().ToLower().Contains("tif"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else
+                        {
+
+                            var subFolders = Directory.GetDirectories(sourceFolder);
+                            foreach (var subFolder in subFolders)
+                            {
+                                Console.WriteLine("Testing subFolder: {0}", subFolder);
+                                if (subFolder.ToUpper().ToLower().Contains("tif"))
+                                {
+                                    tifFolder = sourceFolder;
+                                    Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                }
+                            }
+                        }
+                        
+
+                        /*
+                        if (sourceFolder.IndexOf("tif", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("TIF"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("tif"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("tiff"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("TIFF"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("tiffs"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (sourceFolder.EndsWith("TIFFS"))
+                        {
+                            tifFolder = sourceFolder;
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "TIFF"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "TIFF";
+
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "tiff"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "tiff";
+
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "TIFFS"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "TIFFS";
+
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "tiffs"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "tiffs";
+
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "tif"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "tif";
+
+                        }
+                        else if (Directory.Exists(sourceFolder + @"\" + "TIF"))
+                        {
+                            tifFolder = sourceFolder + @"\" + "TIF";
+
+                        }
+                        */
+                        if (Directory.Exists(tifFolder))
+                        {
+                            validPath = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("No folder found for shelfmark {0}", shelfmark);
+                            validPath = false;
+                           // return null;
+                        }
 
                     }
-                    else if (Directory.Exists(sourceFolder + @"\" + "tiff"))
+                    catch (Exception ex)
                     {
-                        tifFolder = sourceFolder + @"\" + "tiff";
-
+                        Console.WriteLine("Could not find Tif subfolder for sourcefolder {0}. Exception: {1}", sourceFolder,ex);
+                        validPath = false;
+                        //return null;
                     }
-                    else if (Directory.Exists(sourceFolder + @"\" + "TIFFS"))
-                    {
-                        tifFolder = sourceFolder + @"\" + "TIFFS";
-
-                    }
-                    else if (Directory.Exists(sourceFolder + @"\" + "tiffs"))
-                    {
-                        tifFolder = sourceFolder + @"\" + "tiffs";
-
-                    }
-                    else if (Directory.Exists(sourceFolder + @"\" + "tif"))
-                    {
-                        tifFolder = sourceFolder + @"\" + "tif";
-
-                    }
-                    else if (Directory.Exists(sourceFolder + @"\" + "TIF"))
-                    {
-                        tifFolder = sourceFolder + @"\" + "TIF";
-
-                    }
-                    else
-                    {
-                        Console.WriteLine("No folder found for shelfmark {0}", shelfmark);
-                    }
-
-                    if (Directory.Exists(tifFolder))
-                    {
-                        validPath = true;
-                    }
-
-
                     // now got the tiff folder, need to check the list of files that appears
 
                     // first check it exists:
                     if (validPath)
                     {
-
+                        // Get all tifs
                         DirectoryInfo d = new DirectoryInfo(tifFolder);
                         FileInfo[] Files = d.GetFiles("*.TIF*");
 
@@ -122,9 +184,10 @@ namespace HMDSharepointChecker
                         var numberOfItems = Files.Length; // only do this once per shelfmark
                                                           // do you need this?
 
-                        shelfmarkTIFs.Add(shelfmark);
+                        //shelfmarkTIFs.Add(shelfmark); // why do you need to add the shelfmark? It should be in the filenames
 
-                        List<List<String>> shelfmarkLabels = mapFileNameToLabels(Files);
+                        // to-do: turn the below stuff into a class of its own
+                        shelfmarkLabels = mapFileNameToLabels(Files);
                         // shelfmarkLabels contains 
                         //[0]: filename
                         //[1]: flagStatus
@@ -133,30 +196,58 @@ namespace HMDSharepointChecker
                         //[4]: order number
 
                         // Now write this to a CSV
-                        Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels));
+                        // Not yet...
+                       // Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels));
 
                     }// if validPath == true
 
 
                     else // so not a valid path!
                     {
-                        shelfmarkTIFs.Add(shelfmark);
+                        // really need the class implementation here so I don't have to add 4 nulls...
+                        // Old method:
+                        /*shelfmarkTIFs.Add(shelfmark);
                         shelfmarkTIFs.Add(null);
+                        shelfmarkTIFs.Add(null);
+                        shelfmarkTIFs.Add(null);
+                        shelfmarkTIFs.Add(null);
+                        */
+
+                        // need to build up a list and then add it to shelfmarkLabels
+                        var errorList = new List<string> {shelfmark, null,null,null,null};
+                        shelfmarkLabels.Add(errorList);
+
                         continue; // use continue for now, but will need to write out invalid path to a variable at some point
                     }
                 }
                 else
                 {
+                    var errorList = new List<string> { shelfmark, null, null, null, null };
+                    shelfmarkLabels.Add(errorList);
+
+
+                    // Old method (deprecated)
+                    /*
                     shelfmarkTIFs.Add(shelfmark);
                     shelfmarkTIFs.Add(null);
+                    */
+
                     // Got yourself a shelfmark that needs checking, so obviously things will fail here...
                     continue;
                 }
-                allShelfmarkTIFs.Add(shelfmarkTIFs);
+                try
+                {
+                    allShelfmarkTIFAndLabels.Add(shelfmarkLabels);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: Could not add shelfmark tif information to the overall list of shelfmarks");
+                    return null;
+                }
             } // end of the for loop over each shelfmark
 
 
-            return allShelfmarkTIFs;
+            return allShelfmarkTIFAndLabels;
         }
         private static List<List<string>> mapFileNameToLabels(FileInfo[] Files)
         {
@@ -164,23 +255,10 @@ namespace HMDSharepointChecker
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
             List<String> shelfmarkLabels = new List<String>();
 
-            Dictionary<string, string> order_map = new Dictionary<string, string>();
             List<string> fileNames = Files.Select(x => x.Name).ToList();
-
-
-            // List<String> frontMatter = new List<String>();
-            // List<String> endMatter = new List<String>();
-            // List<String> folios = new List<String>();
 
             List<String> frontNames = new List<String>();
             List<String> endNames = new List<String>();
-
-            // Make front covers appear first in the order
-            order_map.Add("fblefr", "1");
-            order_map.Add("fblefv", "2");
-            order_map.Add("fbspi", Files.Length.ToString()); // spine is always the last item?
-            order_map.Add("fbrigv", ((Files.Length) - 1).ToString()); // back cover
-            order_map.Add("fbrigr", ((Files.Length) - 2).ToString()); // back cover inside
 
             // front matter
             frontNames.Add("fblefr");
@@ -214,7 +292,10 @@ namespace HMDSharepointChecker
             List<string> cEndMatter = fileNames.Where(f => initialEndMatterRegex.IsMatch(f)).ToList();
             List<string> cFolios = fileNames.Where(f => initialFolioRegex.IsMatch(f)).ToList();
 
-            List<List<String>> allFilesSorted = new List<List<String>>();
+            List<List<String>> allFilesSorted = new List<List<String>>(); // make this into a class...
+            //LabelledFile allFilesSorted = new LabelledFile();
+
+
             List<List<string>> frontMatter = new List<List<String>>();
             List<List<string>> endFlysheets = new List<List<String>>();
             List<List<string>> endMatter = new List<List<String>>();
@@ -549,6 +630,7 @@ namespace HMDSharepointChecker
                 }
                 // check for anything else that passed through that failed the above checks
 
+
                 frontMatter.Sort((a, b) => a[0].CompareTo(b[0]));
                 folios.Sort((a, b) => a[0].CompareTo(b[0]));
                 endFlysheets.Sort((a, b) => a[0].CompareTo(b[0]));
@@ -559,6 +641,7 @@ namespace HMDSharepointChecker
                                                                      // if DIPSMatches ==3 and end flysheets exist, one of folios, frontmatter or endmatter isn't dips compliant and we should flag 
                 {
                     List<string> errorFlag = new List<string> { "Mixture of DIPS-compliant and non-compliant filenames in this shelfmark!" };
+                    //allFilesSorted.flagStatus.Add(errorFlag);
                     allFilesSorted.Add(errorFlag);
                 }
 
