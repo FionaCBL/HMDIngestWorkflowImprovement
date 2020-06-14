@@ -80,6 +80,7 @@ namespace HMDSharepointChecker
             // Get the labels (image order, image type etc) for all shelfmarks passed into this function
             var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus,env);
             Assert.IsNotNull(allShelfmarkFiles);
+            
 
             // Compare number of XML files (if any) to number of tifs...
             // Maybe put the XML getting functionality here?

@@ -85,73 +85,12 @@ namespace HMDSharepointChecker
                                 Console.WriteLine("Testing subFolder: {0}", subFolder);
                                 if (subFolder.ToUpper().ToLower().Contains("tif"))
                                 {
-                                    tifFolder = sourceFolder;
+                                    tifFolder = subFolder;
                                     Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
                                 }
                             }
                         }
-                        
 
-                        /*
-                        if (sourceFolder.IndexOf("tif", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("TIF"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("tif"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("tiff"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("TIFF"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("tiffs"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (sourceFolder.EndsWith("TIFFS"))
-                        {
-                            tifFolder = sourceFolder;
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "TIFF"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "TIFF";
-
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "tiff"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "tiff";
-
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "TIFFS"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "TIFFS";
-
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "tiffs"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "tiffs";
-
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "tif"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "tif";
-
-                        }
-                        else if (Directory.Exists(sourceFolder + @"\" + "TIF"))
-                        {
-                            tifFolder = sourceFolder + @"\" + "TIF";
-
-                        }
-                        */
                         if (Directory.Exists(tifFolder))
                         {
                             validPath = true;
@@ -185,19 +124,30 @@ namespace HMDSharepointChecker
                                                           // do you need this?
 
                         //shelfmarkTIFs.Add(shelfmark); // why do you need to add the shelfmark? It should be in the filenames
-
                         // to-do: turn the below stuff into a class of its own
-                        shelfmarkLabels = mapFileNameToLabels(Files);
+                        shelfmarkLabels = mapFileNameToLabels(Files,tifFolder);
                         // shelfmarkLabels contains 
+
                         //[0]: filename
                         //[1]: flagStatus
                         //[2]: objectType
                         //[3]: label
                         //[4]: order number
 
-                        // Now write this to a CSV
+
+                        // In production you will make outFolder equal to the tifFolder,
+                        // but for now...
+                        string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                        outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
+                        string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        outFolder += SM_folderFormat;
+
+                        if (!Directory.Exists(outFolder))
+                        {
+                            Directory.CreateDirectory(outFolder);
+                        }                        // Now write this to a CSV
                         // Not yet...
-                       // Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels));
+                        Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels,outFolder));
 
                     }// if validPath == true
 
@@ -241,15 +191,22 @@ namespace HMDSharepointChecker
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error: Could not add shelfmark tif information to the overall list of shelfmarks");
+                    Console.WriteLine("Error: Could not add shelfmark tif information to the overall list of shelfmarks \n Shelfmark: {0} \n Exception: {1}",shelfmark,ex);
                     return null;
+                    // this should really never happen, so can leave this in
                 }
             } // end of the for loop over each shelfmark
 
 
             return allShelfmarkTIFAndLabels;
+
+            // returns you a List<List<List<String>>>
+            // Shelfmark labels are outputted as a list of list of strings - for each shelfmark you will have 
+            // a list for each file: filename, image label, order label etc
+            // so shelfmark labels are a list of list of strings
+            // For all shelfmarks this is then List<List<List<String>>>
         }
-        private static List<List<string>> mapFileNameToLabels(FileInfo[] Files)
+        private static List<List<string>> mapFileNameToLabels(FileInfo[] Files, String tifFolders)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
@@ -789,7 +746,7 @@ namespace HMDSharepointChecker
             return !fError;
         }
 
-        private static bool writeFileLabelsToCSV(List<List<String>> allShelfmarkFiles)
+        private static bool writeFileLabelsToCSV(List<List<String>> ShelfmarkFilesLabels, String outFolder)
         {
             bool fError = false;
 
@@ -798,7 +755,8 @@ namespace HMDSharepointChecker
                 const char sep = ',';
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
-                using (var sr = new StreamWriter("test.txt", false, uce))
+                string outPath = outFolder + @"\ImgOrder.csv";
+                using (var sr = new StreamWriter(outPath, false, uce))
                 {
                     using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
                     {
@@ -806,10 +764,11 @@ namespace HMDSharepointChecker
                         {
                             csvFile.WriteField(header);
                         }
-                        csvFile.NextRecord(); // should skip over header?
-                        foreach (var record in allShelfmarkFiles)
+                        csvFile.NextRecord(); // skips to next line...
+                        foreach (var record in ShelfmarkFilesLabels)
                         {
-                            for (int i = 0; i < record.Count; i++)
+                            // No need for this loop
+                            /*for (int i = 0; i < record.Count; i++)
                             {
                                 // now allFilesSorted contains 
                                 //[0]: filename
@@ -817,13 +776,14 @@ namespace HMDSharepointChecker
                                 //[2]: objectType
                                 //[3]: label
                                 //[4]: order number
-                                csvFile.WriteField(record[0]); // filename
-                                csvFile.WriteField(record[4]); // order number
-                                csvFile.WriteField(record[2]); // object type
-                                csvFile.WriteField(record[3]); // label
-                                csvFile.WriteField(record[1]); // error flag status
-                            }
-                            if (allShelfmarkFiles.IndexOf(record) != allShelfmarkFiles.Count - 1)
+                                */
+                        csvFile.WriteField(record[0]); // filename
+                        csvFile.WriteField(record[4]); // order number
+                        csvFile.WriteField(record[2]); // object type
+                        csvFile.WriteField(record[3]); // label
+                        csvFile.WriteField(record[1]); // error flag status
+                            //}
+                            if (ShelfmarkFilesLabels.IndexOf(record) != ShelfmarkFilesLabels.Count - 1)
                             {
                                 csvFile.NextRecord();
                             }
