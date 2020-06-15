@@ -29,7 +29,8 @@ namespace HMDSharepointChecker
             else if (env == "test")
             {
                 spURL = "http://v12t-sp13wfe1:88/";
-                project = "Zoroastrian Manuscripts"; // exists in the test SP too - for now
+                //project = "Zoroastrian Manuscripts";
+                project = "HMD Portfolio - 16th Century English Manuscripts";
             }
             else
             {
@@ -65,10 +66,10 @@ namespace HMDSharepointChecker
 
             // Get the 'Digitisation Workflow' list fields and print them out:
             // ONLY FOR DEBUGGING PURPOSES:
-            /*
+            
             var DigitisationWorkflowTitles = SharepointTools.GetSharePointListTitles(spURL, "Digitisation Workflow");
             Assert.IsNotNull(DigitisationWorkflowTitles.Count);
-            */
+            
 
 
             // Get the contents of the "ID", "Shelfmark" and "Source Folder" columns in the 'Digitisation Workflow' list
@@ -80,19 +81,29 @@ namespace HMDSharepointChecker
             Assert.IsNotNull(SourceFolderStatus.Count);
             Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus,"sourceFolderStatus"));
 
+            String SharePointSourceFolderCheck = "SourceFolderValid";
+            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointSourceFolderCheck));
+
+            Assert.IsTrue(SharepointTools.ReportSourceFolderStatus(spURL, "Digitisation Workflow", SharePointSourceFolderCheck, SourceFolderStatus));
+
             // Add in Shelfmark protected chars check here
-            String SharePointColumnShelfmarkCheck = "Shelfmark Check";
+            String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
             Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
 
-            List<String> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
+            List<List<String>> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
             if (badShelfmarks.Count != 0)
             {
-                // Write new SharePoint column if it doesn't exist...
-                
                 // now we need to write to sharepoint by shelfmark
-                Assert.IsTrue(SharepointTools.WriteToSharepointColumnByShelfmark(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, badShelfmarks));
-
-            }
+                String badShelfmarkMessage = "Protected character found in shelfmark";
+                //Assert.IsTrue(SharepointTools.WriteToSharepointColumnByShelfmark(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, badShelfmarks));
+                // Try by ID instead...
+                foreach (List<String> item in badShelfmarks)
+                {
+                    Int32 ID = Int32.Parse(item[0]);
+                    String SM = item[1];
+                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck,SM, ID,badShelfmarkMessage));
+                }
+                }
             // can write this out at the end in a little console report
 
 
