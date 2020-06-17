@@ -9,12 +9,7 @@ namespace HMDSharepointChecker
 
         public static String[] GetFilesFrom(String searchFolder, String[] filters, bool isRecursive)
         {
-            // Use like:
-            //String searchFolder = @"C:\MyFolderWithImages";
-            //var filters = new String[] { "jpg", "jpeg", "png", "gif", "tiff", "bmp", "svg" };
-            //var files = GetFilesFrom(searchFolder, filters, false);
-
-
+            
             List<String> filesFound = new List<String>();
             var searchOption = isRecursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             foreach (var filter in filters)

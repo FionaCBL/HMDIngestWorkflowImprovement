@@ -8,34 +8,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HMDSharepointChecker
 {
-    class LabelledFile
-    {
-        public List<string> fileName = new List<String>();
-        public List<string> flagStatus = new List<String>();
-        public List<string> objectType = new List<String>();
-        public List<string> imgLabel = new List<String>();
-        public List<string> orderNumber = new List<String>();
-
-        public List<string> frontMatter = new List<String>();
-        public List<string> folios = new List<String>();
-        public List<string> endFlysheets = new List<String>();
-        public List<string> endMatter = new List<String>();
-
-        public LabelledFile()
-        { }
-
-
-
-
-    }
-
     class InputOrderSpreadsheetTools
     {
-        
-
         public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<List<String>> sharepointOut, String env, String spURL, String spList)
         {
-            bool fError = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
             List<List<List<String>>> allShelfmarkTIFAndLabels = new List<List<List<String>>>();
 
@@ -124,7 +100,6 @@ namespace HMDSharepointChecker
                         var numberOfItems = Files.Length; // only do this once per shelfmark
                                                           // do you need this?
 
-                        //shelfmarkTIFs.Add(shelfmark); // why do you need to add the shelfmark? It should be in the filenames
                         // to-do: turn the below stuff into a class of its own
                         shelfmarkLabels = mapFileNameToLabels(Files,tifFolder);
                         // shelfmarkLabels is a list of lists
@@ -220,15 +195,6 @@ namespace HMDSharepointChecker
 
                     else // so not a valid path!
                     {
-                        // really need the class implementation here so I don't have to add 4 nulls...
-                        // Old method:
-                        /*shelfmarkTIFs.Add(shelfmark);
-                        shelfmarkTIFs.Add(null);
-                        shelfmarkTIFs.Add(null);
-                        shelfmarkTIFs.Add(null);
-                        shelfmarkTIFs.Add(null);
-                        */
-
                         // need to build up a list and then add it to shelfmarkLabels
                         var errorList = new List<string> {shelfmark, null,null,null,null};
                         shelfmarkLabels.Add(errorList);
@@ -240,13 +206,6 @@ namespace HMDSharepointChecker
                 {
                     var errorList = new List<string> { shelfmark, null, null, null, null };
                     shelfmarkLabels.Add(errorList);
-
-
-                    // Old method (deprecated)
-                    /*
-                    shelfmarkTIFs.Add(shelfmark);
-                    shelfmarkTIFs.Add(null);
-                    */
 
                     // Got yourself a shelfmark that needs checking, so obviously things will fail here...
                     continue;
@@ -272,6 +231,7 @@ namespace HMDSharepointChecker
             // so shelfmark labels are a list of list of strings
             // For all shelfmarks this is then List<List<List<String>>>
         }
+
         private static List<List<string>> mapFileNameToLabels(FileInfo[] Files, String tifFolders)
         {
 
@@ -715,87 +675,7 @@ namespace HMDSharepointChecker
            //[2]: objectType
            //[3]: label
            //[4]: order number
-
-            // Should just create a file label class... to-do!
-
-            // Still need to check if image file names have consecutive numbering
-
-            // Option for just doing the regex on the list instead:
-            /*
-            List<string> frontMatter = fileNames.Where(f => frontMatterRegex.IsMatch(f)).ToList();
-            List<string> endFlysheets = fileNames.Where(f => endFlysheetsRegex.IsMatch(f)).ToList();
-            List<string> endMatter = fileNames.Where(f => endMatterRegex.IsMatch(f)).ToList();
-            List<string> folios = fileNames.Where(f => folioRegex.IsMatch(f)).ToList();
-
-            List<String> allFilesSorted = new List<String>();
-            if (frontMatter.Any() | folios.Any()) // is DIPS format
-            {
-                List<String> sortedFrontMatter = frontMatter.OrderBy(x => x).ToList();
-                List<String> sortedEndMatter = endMatter.OrderBy(x => x).ToList();
-                List<String> sortedEndFlysheets = endFlysheets.OrderBy(x => x).ToList();
-                List<String> sortedFolios = folios.OrderBy(x => x).ToList();
-                allFilesSorted = sortedFrontMatter.Concat(sortedFolios).Concat(sortedEndFlysheets).Concat(sortedEndMatter).ToList();
-            }
-            else
-            {
-                allFilesSorted = fileNames.OrderBy(x => x).ToList();
-            }
-            int counter = 1;
-            */
-
             return allFilesSorted;
-        }
-
-
-        public static bool RetrieveImgOrderLabels(List<List<String>> allShelfmarkFiles, String env)
-        {
-            bool fError = false;
-
-            if (env == "test")
-            {
-                try
-                {
-                    foreach (List<String> shelfmarkFiles in allShelfmarkFiles)
-                    {
-                        // ======================== this block is just used for testing locally =====================
-
-                        string filePath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                        filePath += @"\HMDSharepoint_ImgOrderTest\";
-                        string SM_folderFormat = shelfmarkFiles[0].ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
-                        filePath += SM_folderFormat;
-
-                        if (!Directory.Exists(filePath))
-                        {
-                            Directory.CreateDirectory(filePath);
-                        }
-                        // ===============================================================
-                        foreach (var thing in shelfmarkFiles)
-                        {
-                            // Create a directory on the user's desktop if it doesn't already exist
-
-                            Console.WriteLine("{0}", thing);
-                        }
-                    }
-                }
-                catch(Exception ex)
-                {
-                    Console.WriteLine("ERROR: {0}", ex);
-                    fError = true;
-                    return !fError;
-                }
-                   
-            }
-            else if(env == "prod")
-            {
-                //do whatever you'd want to do in prod - we're only at test for now
-            }
-            else // env is ill-defined
-            {
-                fError = true;
-            }
-
-
-            return !fError;
         }
 
         private static bool writeFileLabelsToCSV(List<List<String>> ShelfmarkFilesLabels, String outFolder)
@@ -830,23 +710,13 @@ namespace HMDSharepointChecker
                         }
                         csvFile.NextRecord(); // skips to next line...
                         foreach (var record in ShelfmarkFilesLabels)
-                        {
-                            // No need for this loop
-                            /*for (int i = 0; i < record.Count; i++)
-                            {
-                                // now allFilesSorted contains 
-                                //[0]: filename
-                                //[1]: flagStatus
-                                //[2]: objectType
-                                //[3]: label
-                                //[4]: order number
-                                */
-                        csvFile.WriteField(record[0]); // filename
-                        csvFile.WriteField(record[4]); // order number
-                        csvFile.WriteField(record[2]); // object type
-                        csvFile.WriteField(record[3]); // label
-                        csvFile.WriteField(record[1]); // error flag status
-                            //}
+                        { 
+                            csvFile.WriteField(record[0]); // filename
+                            csvFile.WriteField(record[4]); // order number
+                            csvFile.WriteField(record[2]); // object type
+                            csvFile.WriteField(record[3]); // label
+                            csvFile.WriteField(record[1]); // error flag status
+                        
                             if (ShelfmarkFilesLabels.IndexOf(record) != ShelfmarkFilesLabels.Count - 1)
                             {
                                 csvFile.NextRecord();

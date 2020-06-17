@@ -22,13 +22,10 @@ namespace HMDSharepointChecker
                 var siteTitle = site.Title;
                 return !string.IsNullOrEmpty(siteTitle);
 
-
-
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Custom Error Text " + ex.Message);
+                Console.WriteLine("Failed to find sharepoint site. " + ex.Message);
 
                 // Any exception returns false
 
@@ -71,7 +68,6 @@ namespace HMDSharepointChecker
                 List<string> listNames = new List<string>();
                 foreach (SP.List oList in collList)
                 {
-                    //Console.WriteLine("Title: {0} Created: {1}", oList.Title, oList.Created.ToString());
                     listNames.Add(oList.Title);
                 }
                 return listNames;
@@ -83,7 +79,7 @@ namespace HMDSharepointChecker
         }
 
 
-        public static List<String> GetSharePointListTitles(string sURL, string lName)
+        public static List<String> GetSharePointListFields(string sURL, string lName)
         {
 
             try
@@ -126,7 +122,7 @@ namespace HMDSharepointChecker
 
 
 
-        public static List<List<String>> GetSharePointListTitleContents(string sURL, string lName, string env, string project)
+        public static List<List<String>> GetSharePointListFieldContents(string sURL, string lName, string env, string project)
         {
             var myID = "";
             var myTitle = "";
@@ -349,23 +345,13 @@ namespace HMDSharepointChecker
                             fullSourceFolderPath = "";
                         }
 
-                        //if (DirectoryExists)
-                        //{
-
-                        //string realFolderLocation = UNCPath(sfAlt);
-                        // string share = Dfs.GetDfsInfo(sfAlt);
-
-                        // Need to put in DFS finding stuff here, but not now
-
-
-                        //}
 
                     }
 
-                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", fullSourceFolderPath, DirectoryExists);
+                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
                     else if (altDirectoryExists)
                     {
-                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", fullSourceFolderPath, sfAlt, altDirectoryExists);
+                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
                         checkSourceFolder = true;
                     }
                     else
@@ -485,7 +471,6 @@ namespace HMDSharepointChecker
 
         public static List<List<String>> GetSourceFolderXMLs(List<List<String>> sfStatus, bool recursive)
         {
-            bool containsXMLs = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>();
             for (int i = 1; i < sfStatus.Count; i++)
             {
@@ -509,7 +494,6 @@ namespace HMDSharepointChecker
 
                     if (xmlList.Count > 0)
                     {
-                        containsXMLs = true;
                     }
                 }
                 catch
@@ -525,7 +509,6 @@ namespace HMDSharepointChecker
 
         public static List<String> GetShelfmarkXMLs(String sourceFolder)
         {
-            bool containsXMLs = false;
             List<String> sourceFolderXMLs = new List<String>();
 
             DirectoryInfo d = new DirectoryInfo(sourceFolder);
