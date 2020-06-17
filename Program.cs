@@ -76,18 +76,37 @@ namespace HMDSharepointChecker
             var env = "test";
             bool debug = false;
 
+            Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
+            String inputEnv = Console.ReadLine();
+            if (inputEnv.ToLower() == "yes")
+            {
+                env = "prod";
+            }
+
+            // do initial setup
+            Dictionary<String, String> variablesDictionary = InitialSetup(env);
+            Assert.IsNotNull(variablesDictionary); // Check we set the variables properly
+            var spURL = variablesDictionary["spURL"];
+            var project = variablesDictionary["project"];
+            Assert.IsTrue(RunInitialTests(spURL));
+
+            Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
+            String inputProjectYN = Console.ReadLine();
+            if (inputProjectYN.ToLower() == "yes")
+            {
+                Console.WriteLine("Type a project name (must match sharepoint record)", project);
+                String inputProject = Console.ReadLine();
+                if(inputProject.Length > 0)
+                {
+                    project = inputProject;
+                }
+            }
 
             //===================== Checks to run ====================
             bool reportShelfmarkCheckStatus = false;
             bool runShelfmarkCharacterChecks = false;
             bool runImageOrderGenerationXMLChecks = false;
 
-            Console.WriteLine("You are currently running {0}. Switch to prod? yes/no",env);
-            String inputEnv = Console.ReadLine();
-            if (inputEnv.ToLower() == "yes")
-            {
-                env = "prod";
-            }
 
             Console.WriteLine("Run shelfmark source folder checks? yes/no");
             String inputOne = Console.ReadLine();
@@ -110,13 +129,8 @@ namespace HMDSharepointChecker
 
             // =======================================================
 
-            // do initial setup
-            Dictionary<String, String> variablesDictionary = InitialSetup(env);
-            Assert.IsNotNull(variablesDictionary); // Check we set the variables properly
-            var spURL = variablesDictionary["spURL"];
-            var project = variablesDictionary["project"];
+            
 
-            Assert.IsTrue(RunInitialTests(spURL));
 
             
 
@@ -207,7 +221,8 @@ namespace HMDSharepointChecker
             //Assert.IsNotNull(sourceFolderXMLFiles);
 
 
-
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadKey();
 
             return;            
         }

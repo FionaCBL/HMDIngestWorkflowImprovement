@@ -251,7 +251,7 @@ namespace HMDSharepointChecker
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
             List<String> shelfmarkLabels = new List<String>();
-
+            string theShelfmark = "";
             List<string> fileNames = Files.Select(x => x.Name).ToList();
 
             // Define regular expressions to search for
@@ -410,6 +410,7 @@ namespace HMDSharepointChecker
                                 string fileExtension = split.Last(); // tif
                                 string[] split2 = shelfmark_filename.Split('_');
                                 string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                theShelfmark = derivedShelfmark;
                                 string derivedFilename = split2.Last();
                                 string trimmedName = derivedFilename.Trim('f');
                                 string noZerosName = trimmedName.TrimStart('0');
@@ -427,6 +428,7 @@ namespace HMDSharepointChecker
                                 string fileExtension = split.Last(); // tif
                                 string[] split2 = shelfmark_filename.Split('_');
                                 string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                theShelfmark = derivedShelfmark;
                                 string derivedFilename = split2.Last();
                                 string trimmedName = derivedFilename.Trim('f');
                                 string noZerosName = trimmedName.TrimStart('0');
@@ -445,6 +447,7 @@ namespace HMDSharepointChecker
                                 string fileExtension = split.Last(); // tif
                                 string[] split2 = shelfmark_filename.Split('_');
                                 string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                                theShelfmark = derivedShelfmark;
                                 string derivedFilename = split2.Last();
                                 fols.Add(derivedFilename);
                             }
@@ -461,6 +464,7 @@ namespace HMDSharepointChecker
                             string fileExtension = split.Last(); // tif
                             string[] split2 = shelfmark_filename.Split('_');
                             string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                            theShelfmark = derivedShelfmark;
                             string derivedFilename = split2.Last();
                             fols.Add(derivedFilename);
 
@@ -623,9 +627,11 @@ namespace HMDSharepointChecker
                                                                      // if front matter, folios + endmatter found (might not be any flysheets) dipsmatches = 3 FINE
                                                                      // if DIPSMatches ==3 and end flysheets exist, one of folios, frontmatter or endmatter isn't dips compliant and we should flag 
                 {
-                    List<string> errorFlag = new List<string> { "Mixture of DIPS-compliant and non-compliant filenames in this shelfmark!" };
+                    // Need this to trigger some writing to sharepoint - BROKEN FOR NOW.
+                    // List<string> errorFlag = new List<string> { "Mixture of DIPS-compliant and non-compliant filenames in this shelfmark!" };
                     //allFilesSorted.flagStatus.Add(errorFlag);
-                    allFilesSorted.Add(errorFlag);
+                    // allFilesSorted.Add(errorFlag);
+                    Console.WriteLine("Mixture of DIPS-compliant and non-compliant filenames in shelfmark {0}", theShelfmark);
                 }
 
                 foreach (List<String> fmList in frontMatter)
