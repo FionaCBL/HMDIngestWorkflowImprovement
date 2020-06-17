@@ -31,12 +31,12 @@ namespace HMDSharepointChecker
 
                 if (!string.IsNullOrEmpty(suffix))
                 {
-                    filename = @"C:\Users\hjmoss\Desktop\HMDSharepointLogs\HMDSharepointOutput_" + suffix + "_" + dayNow + "_" + timeNow + ".txt"; // this is hardcoded for now, clean this up going fwd
+                    filename = filePath+@"\HMDSharepointOutput_" + suffix + "_" + dayNow + "_" + timeNow + ".txt"; // this is hardcoded for now, clean this up going fwd
 
                 }
                 else
                 {
-                    filename = @"C:\Users\hjmoss\Desktop\HMDSharepointLogs\HMDSharepointOutput_" + dayNow + "_" + timeNow + ".txt"; // this is hardcoded for now, clean this up going fwd
+                    filename = filePath+@"\HMDSharepointOutput_" + dayNow + "_" + timeNow + ".txt"; // this is hardcoded for now, clean this up going fwd
 
                 }
                 using (System.IO.StreamWriter file = new System.IO.StreamWriter(filename))

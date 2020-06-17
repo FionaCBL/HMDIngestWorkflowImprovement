@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.SharePoint.Client;
 using SP = Microsoft.SharePoint.Client;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 namespace HMDSharepointChecker
 {
     public class SharepointTools
@@ -20,13 +22,10 @@ namespace HMDSharepointChecker
                 var siteTitle = site.Title;
                 return !string.IsNullOrEmpty(siteTitle);
 
-
-
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Custom Error Text " + ex.Message);
+                Console.WriteLine("Failed to find sharepoint site. " + ex.Message);
 
                 // Any exception returns false
 
@@ -69,7 +68,6 @@ namespace HMDSharepointChecker
                 List<string> listNames = new List<string>();
                 foreach (SP.List oList in collList)
                 {
-                    //Console.WriteLine("Title: {0} Created: {1}", oList.Title, oList.Created.ToString());
                     listNames.Add(oList.Title);
                 }
                 return listNames;
@@ -81,7 +79,7 @@ namespace HMDSharepointChecker
         }
 
 
-        public static List<String> GetSharePointListTitles(string sURL, string lName)
+        public static List<String> GetSharePointListFields(string sURL, string lName)
         {
 
             try
@@ -124,7 +122,7 @@ namespace HMDSharepointChecker
 
 
 
-        public static List<List<String>> GetSharePointListTitleContents(string sURL, string lName, string env, string project)
+        public static List<List<String>> GetSharePointListFieldContents(string sURL, string lName, string env, string project)
         {
             var myID = "";
             var myTitle = "";
@@ -137,36 +135,12 @@ namespace HMDSharepointChecker
                     ClientContext clientContext = new ClientContext(sURL);
                     SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
 
-                    /*
-                CamlQuery camlQuery = new CamlQuery();
-                    // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
 
-                    // testing by project in the 'test' env
-                    //camlQuery.ViewXml = "<View Scope='RecursiveAll'><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>Zoro</Value></Contains></Where></Query></View>";
-                    
-                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Project'/><Value Type = 'Text'>Zoro</Value></Contains></Where>";
-
-                    Console.WriteLine("CAMLQuery: {0}", camlQuery.ViewXml);
-
-
-                    // for all items:
-                //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
-                // for your query:
-                SP.ListItemCollection oItems = oList.GetItems(camlQuery);
-
-                clientContext.Load(oList);
-                clientContext.Load(oItems);
-                clientContext.ExecuteQuery();
-                */
 
                     CamlQuery camlQuery = new CamlQuery();
-                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>Zoro</Value></Contains></Where></Query></View>";
+                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
                     ListItemCollection oItems = oList.GetItems(camlQuery);
-                    //clientContext.Load(oItems,
-                    //items => items.Include(
-                    //      item => item.Id,
-                    //     item => item.DisplayName,
-                    //     item => item.HasUniqueRoleAssignments));
+
                     clientContext.Load(oItems);
 
                     clientContext.ExecuteQuery();
@@ -231,7 +205,7 @@ namespace HMDSharepointChecker
                     CamlQuery camlQuery = new CamlQuery();
                     // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
 
-                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name = 'pSIP_x0020_Generation_x0020_Calc'/><Value Type = 'Text'>1</Value></Contains></Where>";
+                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
 
 
                     //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
@@ -371,29 +345,20 @@ namespace HMDSharepointChecker
                             fullSourceFolderPath = "";
                         }
 
-                        //if (DirectoryExists)
-                        //{
-
-                        //string realFolderLocation = UNCPath(sfAlt);
-                        // string share = Dfs.GetDfsInfo(sfAlt);
-
-                        // Need to put in DFS finding stuff here, but not now
-
-
-                        //}
 
                     }
 
-                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", fullSourceFolderPath, DirectoryExists);
+                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
                     else if (altDirectoryExists)
                     {
-                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", fullSourceFolderPath, sfAlt, altDirectoryExists);
+                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
                         checkSourceFolder = true;
                     }
                     else
                     {
                         Console.WriteLine("ERROR: Folder {0} not found", sourceFolder);
                         checkSourceFolder = true;
+
                     }
                     string folderStatus = DirectoryExists.ToString();
                     itemStatus.Add(ID);
@@ -433,6 +398,30 @@ namespace HMDSharepointChecker
             }
             return folderExistenceStatus;
 
+        }
+
+        public static bool ReportSourceFolderStatus(string spURL, string spList, string SFCol, List<List<String>> SFStatus)
+        {
+            bool fError = false;
+            for (int i = 1; i < SFStatus.Count; i++)
+            {
+                var item = SFStatus[i];
+                String shelfmark = item[1].ToString();
+                String status = item[5].ToString();
+                Int32 ID = Int32.Parse(item[0]);
+
+                if (!String.IsNullOrEmpty(status))
+                {
+                    if (status.ToUpper().ToLower() == "true")
+                    {
+                        string Message = "Invalid";
+                        Assert.IsTrue(WriteToSharepointColumnByID(spURL, spList, SFCol, shelfmark, ID, Message));
+                    }
+                }
+            }
+
+
+            return !fError;
         }
 
 
@@ -482,7 +471,6 @@ namespace HMDSharepointChecker
 
         public static List<List<String>> GetSourceFolderXMLs(List<List<String>> sfStatus, bool recursive)
         {
-            bool containsXMLs = false;
             List<List<String>> sourceFolderXMLs = new List<List<String>>();
             for (int i = 1; i < sfStatus.Count; i++)
             {
@@ -506,7 +494,6 @@ namespace HMDSharepointChecker
 
                     if (xmlList.Count > 0)
                     {
-                        containsXMLs = true;
                     }
                 }
                 catch
@@ -522,7 +509,6 @@ namespace HMDSharepointChecker
 
         public static List<String> GetShelfmarkXMLs(String sourceFolder)
         {
-            bool containsXMLs = false;
             List<String> sourceFolderXMLs = new List<String>();
 
             DirectoryInfo d = new DirectoryInfo(sourceFolder);
@@ -534,23 +520,31 @@ namespace HMDSharepointChecker
         (1UL << c & 0xD4008404FFFFFFFFUL) != 0 :
         c == '\\' || c == '|';
 
-        public static List<String> BadShelfmarkNames(List<List<String>> itemList)
+        public static List<List<String>> BadShelfmarkNames(List<List<String>> itemList)
         {
-            List<String> badShelfmarks = new List<String>();
+            List<List<String>> badShelfmarksIDs = new List<List<String>>();
             bool protectedCharsFound = false;
             foreach (var item in itemList)
             {
+                List<String> flagShelfmark = new List<String>();
                 string Shelfmark = item[1];
                 foreach (char character in Shelfmark)
                 {
                     if (IsInvalidFileNameChar(character))
                     {
-                        badShelfmarks.Add(Shelfmark);
+                        protectedCharsFound = true;
+
                     }
                 }
-
+                if (protectedCharsFound)
+                {
+                    flagShelfmark.Add(item[0]);
+                    flagShelfmark.Add(Shelfmark);
+                    badShelfmarksIDs.Add(flagShelfmark);
+                }
             }
-            return badShelfmarks;
+            
+            return badShelfmarksIDs;
         }
 
         public static bool CreateSharepointColumn(String SPSite, String SPListName, String newCol)
@@ -571,7 +565,7 @@ namespace HMDSharepointChecker
                     {
                         if (targetList.Fields[i].Title == newCol)
                         {
-                            fieldExists = true;   
+                            fieldExists = true;
                         }
                     }
                 }
@@ -584,7 +578,7 @@ namespace HMDSharepointChecker
                         List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
                         FieldCollection collField = targetList.Fields;
 
-                        string fieldSchema = "<Field Type='Text' DisplayName='"+newCol+"' Name='"+newCol+"' />";
+                        string fieldSchema = "<Field Type='Text' DisplayName='" + newCol + "' Name='" + newCol + "' />";
                         collField.AddFieldAsXml(fieldSchema, true, AddFieldOptions.AddToDefaultContentType);
 
                         clientContext.Load(collField);
@@ -674,7 +668,7 @@ namespace HMDSharepointChecker
                 {
 
                     CamlQuery camlQuery = new CamlQuery();
-                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
+                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Title'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
                     ListItemCollection items = list.GetItems(camlQuery);
                     ctx.Load(items); // loading all the fields
                     ctx.ExecuteQuery();
@@ -704,41 +698,82 @@ namespace HMDSharepointChecker
         public static bool WriteToSharepointColumnBySingleShelfmark(String SPSite, String SPListName, String writeCol, String shelfmark, String Message)
         {
             bool fError = false;
-
-            try
+            using (ClientContext clientContext = new ClientContext(SPSite))
             {
-
-                ClientContext ctx = new ClientContext(SPSite);
-                List list = ctx.Web.Lists.GetByTitle(SPListName);
-                CamlQuery camlQuery = new CamlQuery();
-                camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Shelfmark'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
-                ListItemCollection items = list.GetItems(camlQuery);
-                ctx.Load(items); // loading all the fields
-                ctx.ExecuteQuery();
-
-                foreach (var item in items)
+                try
                 {
-                    if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                    List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                    clientContext.Load(targetList);
+                    //CamlQuery camlQuery = new CamlQuery();
+                    //camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Title'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where ></Query></View> ";
+                    CamlQuery camlQuery = CamlQuery.CreateAllItemsQuery();
+                    ListItemCollection items = targetList.GetItems(camlQuery);
+                    clientContext.Load(items); // loading all the fields
+                    clientContext.ExecuteQuery();
+
+                    foreach (var item in items)
                     {
-                        item[writeCol] = Message;
-                        item.Update(); // remember changes
-                        ctx.ExecuteQuery(); // commit changes to the server
+                        if (item.FieldValues["Title"].ToString()== shelfmark) // really need to make sure this is the right shelfmark!
+                        {
+                            item.FieldValues[writeCol] = Message;
+                            item.Update(); // remember changes
+                            clientContext.ExecuteQuery(); // commit changes to the server
+                        }
                     }
-                    }
-                
+
+                }
+
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
+                    fError = true;
+                    return !fError;
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
-                fError = true;
+
                 return !fError;
+
+            }
+        public static bool WriteToSharepointColumnByID(String SPSite, String SPListName, String writeCol, String shelfmark, Int32 ID, String Message)
+        {
+            bool fError = false;
+            using (ClientContext clientContext = new ClientContext(SPSite))
+            {
+                try
+                {
+                    int theID = ID;
+                    List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
+                    clientContext.Load(targetList);
+                    SP.ListItem item = targetList.GetItemById(theID);
+                    clientContext.Load(item); // loading all the fields
+                    clientContext.ExecuteQuery();
+
+                    if (item.FieldValues["Title"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                    {
+                        item.FieldValues[writeCol] = Message;
+                        item.RefreshLoad();
+
+                        item.Update(); // remember changes
+                        clientContext.ExecuteQuery(); // commit changes to the server
+                    }
+
+                }
+
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error writing to Sharepoint for shelfmark {0}. Exception: {1}",shelfmark, ex);
+                    fError = true;
+                    return !fError;
+                }
             }
 
             return !fError;
 
-
         }
     }
     }
+
+
+    
 
 
