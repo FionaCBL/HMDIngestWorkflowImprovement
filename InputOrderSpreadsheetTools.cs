@@ -126,6 +126,20 @@ namespace HMDSharepointChecker
                                                      
                             Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
                         }
+                        else if (env == "prod")
+                        {
+                            // In future, write to the sourceFolder location on the network drives
+                            string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                            outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
+                            string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                            outFolder += SM_folderFormat;
+                            if (!Directory.Exists(outFolder))
+                            {
+                                Directory.CreateDirectory(outFolder);
+                            }                        // Now write this to a CSV
+
+                            Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                        }
 
                         // SORT XML THINGS OUT HERE!
                         bool XMLNumberMismatch = false;

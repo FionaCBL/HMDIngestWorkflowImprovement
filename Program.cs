@@ -82,6 +82,13 @@ namespace HMDSharepointChecker
             bool runShelfmarkCharacterChecks = false;
             bool runImageOrderGenerationXMLChecks = false;
 
+            Console.WriteLine("You are currently running {0}. Switch to prod? yes/no",env);
+            String inputEnv = Console.ReadLine();
+            if (inputEnv.ToLower() == "yes")
+            {
+                env = "prod";
+            }
+
             Console.WriteLine("Run shelfmark source folder checks? yes/no");
             String inputOne = Console.ReadLine();
             if (inputOne.ToLower() == "yes")
@@ -114,10 +121,6 @@ namespace HMDSharepointChecker
             
 
 
-            // Add columns for XML checking
-            String SharePointColumnXMLCheck = "ALTOXMLCheck";
-            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
-
            
 
             // Get the 'Digitisation Workflow' list fields and print them out:
@@ -137,7 +140,7 @@ namespace HMDSharepointChecker
             //  Check source folders - requires the above two lines to work
             var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
             Assert.IsNotNull(SourceFolderStatus.Count);
-            if (!debug)
+            if (debug)
             {
                 Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus, "sourceFolderStatus"));
             }
@@ -184,8 +187,18 @@ namespace HMDSharepointChecker
             // Are they version 2.0 or older?
             if (runImageOrderGenerationXMLChecks)
             {
+                bool addColumns = false;
+                if (addColumns)
+                {
+                    // Add columns for XML checking
+                    String SharePointColumnXMLCheck = "ALTOXMLCheck";
+                    Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
+
+                }
+
                 var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow");
                 Assert.IsNotNull(allShelfmarkFiles);
+
             }
             // ======================================================================
 

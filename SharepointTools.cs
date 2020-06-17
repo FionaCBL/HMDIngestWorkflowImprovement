@@ -205,7 +205,7 @@ namespace HMDSharepointChecker
                     CamlQuery camlQuery = new CamlQuery();
                     // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
 
-                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name = 'pSIP_x0020_Generation_x0020_Calc'/><Value Type = 'Text'>1</Value></Contains></Where>";
+                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
 
 
                     //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
