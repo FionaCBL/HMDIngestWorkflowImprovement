@@ -27,7 +27,7 @@ namespace HMDSharepointChecker
 
                 // test a single XML version number
                 bool goodXMLVersion = false;
-                String testXMLPath = @"G:\Heritage Made Digital\05 Projects\Workflow\Validation of Ingest Workflow\Example OCR files\IOR!P!5644_Jun_1899_nos_80-92_001.xml";
+                String testXMLPath = @"\\v8l-lon2\DATA\Heritage Made Digital\05 Projects\Workflow\Validation of Ingest Workflow\Example OCR files\IOR!P!5644_Jun_1899_nos_80-92_001.xml";
                 String XMLVersionNumber = InputOrderSpreadsheetTools.GetXMLVersionNumber(testXMLPath);
                 float XMLVNum = float.Parse(XMLVersionNumber, System.Globalization.CultureInfo.InvariantCulture);
                 if (XMLVNum <= 2.0)
