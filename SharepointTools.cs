@@ -654,6 +654,8 @@ namespace HMDSharepointChecker
                 return fError;
             }
         }
+
+        // Add writing functionality here...
         public static bool WriteToSharepointColumnByShelfmark(String SPSite, String SPListName, String writeCol, List<String> shelfmarks)
         {
             bool fError = false;

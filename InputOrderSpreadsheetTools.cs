@@ -23,7 +23,7 @@ namespace HMDSharepointChecker
 
                 List<List<String>> shelfmarkLabels = new List<List<String>>();
                 bool validPath = false;
-                
+                var itemID = item[0];
                 var shelfmark = item[1];
 
                 if (item[5] != "false")
@@ -96,7 +96,6 @@ namespace HMDSharepointChecker
                         FileInfo[] Files = d.GetFiles("*.TIF*");
 
                         // Can then add this to a list of strings
-                        string str = "";
                         var numberOfItems = Files.Length; // only do this once per shelfmark
                                                           // do you need this?
 
