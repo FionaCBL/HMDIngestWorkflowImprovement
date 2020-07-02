@@ -310,19 +310,19 @@ namespace HMDSharepointChecker
                             if (fblefr)
                             {
                                 fmat.Add("");
-                                fmat.Add("cover");
-                                fmat.Add("front cover");
+                                fmat.Add("Cover");
+                                fmat.Add("Front cover");
                             }
                             else if (fblefv)
                             {
                                 fmat.Add("");
-                                fmat.Add("cover");
-                                fmat.Add("front cover inside");
+                                fmat.Add("Cover");
+                                fmat.Add("Front cover inside");
                             }
                             else if(fsr)
                             {
                                 fmat.Add("");
-                                fmat.Add("flysheet");
+                                fmat.Add("Flysheet");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -332,13 +332,13 @@ namespace HMDSharepointChecker
                                 string trimmedName = derivedFilename.Trim('f','s');
                                 string noZerosName = trimmedName.TrimStart('0');
                                 noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                                string flysheetLabelString = "front flysheet" + noZerosName;
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
                                 fmat.Add(flysheetLabelString);
                             }
                             else if (fsv)
                             {
                                 fmat.Add("");
-                                fmat.Add("flysheet");
+                                fmat.Add("Flysheet");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -356,7 +356,7 @@ namespace HMDSharepointChecker
                                 Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 fmat.Add(errString);
-                                fmat.Add("page");
+                                fmat.Add("Page");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -372,14 +372,14 @@ namespace HMDSharepointChecker
                             string errString = "Unexpected characters in filename. Flag for investigation";
                             fmat.Add(fname);
                             fmat.Add(errString);
-                            fmat.Add("page");
+                            fmat.Add("Page");
                             string[] split = fname.Split('.');
                             string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                             string fileExtension = split.Last(); // tif
                             string[] split2 = shelfmark_filename.Split('_');
                             string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
                             string derivedFilename = split2.Last();
-                            fmat.Add("derivedFilename");
+                            fmat.Add(derivedFilename);
 
                         }
                         frontMatter.Add(fmat);
@@ -403,7 +403,7 @@ namespace HMDSharepointChecker
                             if (fr)
                             {
                                 fols.Add("");
-                                fols.Add("page");
+                                fols.Add("Page");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -414,14 +414,14 @@ namespace HMDSharepointChecker
                                 string trimmedName = derivedFilename.Trim('f');
                                 string noZerosName = trimmedName.TrimStart('0');
                                 noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                                string frString = "folio " + noZerosName;
+                                string frString = "Folio " + noZerosName;
                                 fols.Add(frString);
                                 
                             }
                             else if (fv)
                             {
                                 fols.Add(""); 
-                                fols.Add("page");
+                                fols.Add("Page");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -432,7 +432,7 @@ namespace HMDSharepointChecker
                                 string trimmedName = derivedFilename.Trim('f');
                                 string noZerosName = trimmedName.TrimStart('0');
                                 noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                                string frString = "folio " + noZerosName;
+                                string frString = "Folio " + noZerosName;
                                 fols.Add(frString);
                             }
                             else
@@ -440,7 +440,7 @@ namespace HMDSharepointChecker
                                 Console.WriteLine("ERROR: Folio outside of common DIPS string range. Investigate");
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 fols.Add(errString);
-                                fols.Add("page");
+                                fols.Add("Page");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -457,7 +457,7 @@ namespace HMDSharepointChecker
                             string errString = "Unexpected characters in filename. Flag for investigation";
                             fols.Add(fname);
                             fols.Add(errString);
-                            fols.Add("page");
+                            fols.Add("Page");
                             string[] split = fname.Split('.');
                             string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                             string fileExtension = split.Last(); // tif
@@ -487,7 +487,7 @@ namespace HMDSharepointChecker
                             if (fser)
                             {
                                 efs.Add(""); // error string
-                                efs.Add("flysheet");
+                                efs.Add("Flysheet");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -497,13 +497,13 @@ namespace HMDSharepointChecker
                                 string trimmedName = derivedFilename.Trim('f','s','e');
                                 string noZerosName = trimmedName.TrimStart('0');
                                 noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                                string frString = "back flysheet " + noZerosName;
+                                string frString = "Back flysheet " + noZerosName;
                                 efs.Add(frString);
                             }
                             else if (fsev)
                             {
                                 efs.Add(""); // error string
-                                efs.Add("flysheet");
+                                efs.Add("Flysheet");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -513,14 +513,14 @@ namespace HMDSharepointChecker
                                 string trimmedName = derivedFilename.Trim('f','s','e');
                                 string noZerosName = trimmedName.TrimStart('0');
                                 noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                                string frString = "back flysheet " + noZerosName;
+                                string frString = "Back flysheet " + noZerosName;
                                 efs.Add(frString);
                             }
                             else
                             {
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 efs.Add(errString); // error string
-                                efs.Add("flysheet");
+                                efs.Add("Flysheet");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -535,7 +535,7 @@ namespace HMDSharepointChecker
                             string errString = "Unexpected characters in filename. Flag for investigation";
                             efs.Add(fname);
                             efs.Add(errString);
-                            efs.Add("page");
+                            efs.Add("Page");
                             string[] split = fname.Split('.');
                             string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                             string fileExtension = split.Last(); // tif
@@ -566,26 +566,26 @@ namespace HMDSharepointChecker
                             if (fbrigr)
                             {
                                 ema.Add("");
-                                ema.Add("cover");
-                                ema.Add("back cover inside");
+                                ema.Add("Cover");
+                                ema.Add("Back cover inside");
                             }
                             else if (fbrigv)
                             {
                                 ema.Add("");
-                                ema.Add("cover");
-                                ema.Add("back cover");
+                                ema.Add("Cover");
+                                ema.Add("Back cover");
                             }
                             else if (fbspi)
                             {
                                 ema.Add("");
-                                ema.Add("cover");
-                                ema.Add("spine");
+                                ema.Add("Cover");
+                                ema.Add("Spine");
                             }
                             else // no match for any of these 'usual' cases
                             {
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 ema.Add(errString);
-                                ema.Add("page");
+                                ema.Add("Page");
                                 string[] split = fname.Split('.');
                                 string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                                 string fileExtension = split.Last(); // tif
@@ -602,7 +602,7 @@ namespace HMDSharepointChecker
                             string errString = "Unexpected characters in filename. Flag for investigation";
                             ema.Add(fname);
                             ema.Add(errString);
-                            ema.Add("page");
+                            ema.Add("Page");
                             string[] split = fname.Split('.');
                             string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                             string fileExtension = split.Last(); // tif
@@ -660,7 +660,7 @@ namespace HMDSharepointChecker
                     List<String> nums = new List<String>();
                     nums.Add(sfn);
                     nums.Add(""); // errorString
-                    nums.Add("page");
+                    nums.Add("Page");
                     string[] split = sfn.Split('.');
                     string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                     string fileExtension = split.Last(); // tif
@@ -706,7 +706,7 @@ namespace HMDSharepointChecker
                 const char sep = ',';
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
-                string fNameString = "ImgOrder";
+                string fNameString = "ImageOrder";
                 string outPath = outFolder + @"\"+fNameString+".csv";
 
                 if (File.Exists(outPath))
