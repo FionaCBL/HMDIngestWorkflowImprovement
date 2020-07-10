@@ -122,7 +122,7 @@ namespace HMDSharepointChecker
 
 
 
-        public static List<List<String>> GetSharePointListFieldContents(string sURL, string lName, string env, string project)
+        public static List<List<String>> GetSharePointListFieldContents(string sURL, string lName, string env, string inputvar)
         {
             var myID = "";
             var myTitle = "";
@@ -138,7 +138,8 @@ namespace HMDSharepointChecker
 
 
                     CamlQuery camlQuery = new CamlQuery();
-                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
+                    // COME BACK AND FIX THIS AFTER!
+                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + inputvar + "</Value></Contains></Where></Query></View>";
                     ListItemCollection oItems = oList.GetItems(camlQuery);
 
                     clientContext.Load(oItems);
@@ -203,12 +204,14 @@ namespace HMDSharepointChecker
                     SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
 
                     CamlQuery camlQuery = new CamlQuery();
-                    // camlQuery.ViewXml = "<Where><IsNotNull><FieldRef Name='Source Folder'/></IsNotNull></Where>";
 
-                    camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
-
-
-                    //SP.ListItemCollection oItems = oList.GetItems(CamlQuery.CreateAllItemsQuery());
+                    //camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + "</Value></Contains></Where></Query></View>";
+                    
+                    
+                    // Test this shelfmark
+                    //var inputVar = "<FieldRef Name ='Title'/><Value Type='Text'>12622.e.13</Value>";
+                    var myQuery = @"<View><Query><Where><Contains>" + inputvar + @"</Contains></Where></Query></View>";
+                    camlQuery.ViewXml = String.Format(myQuery);
                     SP.ListItemCollection oItems = oList.GetItems(camlQuery);
 
                     clientContext.Load(oList);

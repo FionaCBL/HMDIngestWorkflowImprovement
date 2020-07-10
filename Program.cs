@@ -74,7 +74,7 @@ namespace HMDSharepointChecker
 
             // Set the environment (use 'test' or 'prod')
             var env = "test";
-            bool debug = false;
+            bool debug = true;
 
             Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
             String inputEnv = Console.ReadLine();
@@ -88,24 +88,57 @@ namespace HMDSharepointChecker
             Assert.IsNotNull(variablesDictionary); // Check we set the variables properly
             var spURL = variablesDictionary["spURL"];
             var project = variablesDictionary["project"];
+            String inputVariable = "";
             Assert.IsTrue(RunInitialTests(spURL));
 
-            Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
-            String inputProjectYN = Console.ReadLine();
-            if (inputProjectYN.ToLower() == "yes")
+            Console.WriteLine("This program searches sharepoint using either projects or inidividual shelfmarks. Use shelfmarks? (yes/no)");
+            String useShelfmarksYN = Console.ReadLine();
+            if (useShelfmarksYN.ToLower() == "yes")
             {
-                Console.WriteLine("Type a project name (must match sharepoint record)", project);
-                String inputProject = Console.ReadLine();
-                if(inputProject.Length > 0)
+                Console.WriteLine("Enter a shelfmark name (must match Sharepoint site)");
+                String inputSingleShelfmark = Console.ReadLine();
+                if (inputSingleShelfmark.Length > 0)
                 {
-                    project = inputProject;
+                    inputVariable = @"<FieldRef Name ='Title'/><Value Type = 'Text'>" + inputSingleShelfmark + @"</Value>";
+                }
+                else // kick it back and use defaults if nothing provided
+                {
+                    Console.WriteLine("No shelfmark provided! Using default project");
+                    inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
+                }
+
+            }
+            else
+            {
+
+                Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
+                String inputProjectYN = Console.ReadLine();
+                if (inputProjectYN.ToLower() == "yes")
+                {
+                    Console.WriteLine("Type a project name (must match sharepoint record)", project);
+                    String inputProject = Console.ReadLine();
+                    if (inputProject.Length > 0)
+                    {
+                        inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + inputProject + @"</Value>";
+
+                    }
+                    else
+                    {
+                        Console.WriteLine("No project provided! Using default project.");
+                        inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
+
+                    }
                 }
             }
+
+            // Check we assigned something to the input variable
+            Assert.AreNotEqual(0, inputVariable.Length);
 
             //===================== Checks to run ====================
             bool reportShelfmarkCheckStatus = false;
             bool runShelfmarkCharacterChecks = false;
             bool runImageOrderGenerationXMLChecks = false;
+
 
 
             Console.WriteLine("Run shelfmark source folder checks? yes/no");
@@ -129,12 +162,7 @@ namespace HMDSharepointChecker
 
             // =======================================================
 
-            
-
-
-            
-
-
+           
            
 
             // Get the 'Digitisation Workflow' list fields and print them out:
@@ -148,7 +176,7 @@ namespace HMDSharepointChecker
             // This is the "grab all the info from sharepoint" part of things
 
             // Get the contents of the "ID", "Shelfmark" and "Source Folder" columns in the 'Digitisation Workflow' list
-            var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListFieldContents(spURL, "Digitisation Workflow",env,project);
+            var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListFieldContents(spURL, "Digitisation Workflow",env,inputVariable);
             Assert.IsNotNull(DigitisationWorkflow_ID_Title_SourceFolders.Count);
 
             //  Check source folders - requires the above two lines to work
