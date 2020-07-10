@@ -100,7 +100,7 @@ namespace HMDSharepointChecker
                                                           // do you need this?
 
                         // to-do: turn the below stuff into a class of its own
-                        shelfmarkLabels = mapFileNameToLabels(Files, tifFolder);
+                        shelfmarkLabels = mapFileNameToLabels(shelfmark,Files, tifFolder);
                         // shelfmarkLabels is a list of lists
                         // each sub-list is  for a particular file and contains:
                         //[0]: filename
@@ -110,34 +110,75 @@ namespace HMDSharepointChecker
                         //[4]: order number
 
 
-                        // In production you will make outFolder equal to the tifFolder,
-                        // but for now...
-                        if (env == "test") // get this going for prod by sticking it in the actual tifFolder
+                         if (env == "test") // get this going for prod by sticking it in the actual tifFolder
                         {
                             string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                             outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
-                            string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
-                            outFolder += SM_folderFormat;
-                            if (!Directory.Exists(outFolder))
-                            {
-                                Directory.CreateDirectory(outFolder);
-                            }                        // Now write this to a CSV
 
-                            Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                            string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+                            string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                            try
+                            {
+                                string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+
+                                outFolder += testTifFolder;
+                                if (!Directory.Exists(outFolder))
+                                {
+                                    Directory.CreateDirectory(outFolder);
+                                }                        // Now write this to a CSV
+
+                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine("Couldn't set the proper output ImageOrder.csv folder path. Exception: {0}", ex);
+                                outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                outFolder += @"\HMDSharepoint_ImgOrderCSVs" + @"\" + SM_folderFormat;
+                                if (!Directory.Exists(outFolder))
+                                {
+                                    Directory.CreateDirectory(outFolder);
+                                }                        // Now write this to a CSV
+
+                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                            }
+
                         }
                         else if (env == "prod")
                         {
-                            // In future, write to the sourceFolder location on the network drives
+                            // ******  This should write straight to network drives in future ****
+                            // Only write to Desktop folder for testing. In future, this functionality will only exist for the test environment.
                             string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                            outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
+                            outFolder += @"\HMDSharepoint_ImgOrderCSVs";
                             string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
-                            outFolder += SM_folderFormat;
-                            if (!Directory.Exists(outFolder))
-                            {
-                                Directory.CreateDirectory(outFolder);
-                            }                        // Now write this to a CSV
 
-                            Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                            string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                            try
+                            {
+                                string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+
+                                outFolder += testTifFolder;
+                                if (!Directory.Exists(outFolder))
+                                {
+                                    Directory.CreateDirectory(outFolder);
+                                }                        // Now write this to a CSV
+
+                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine("Couldn't set the proper output ImageOrder.csv folder path. Exception: {0}", ex);
+                                outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                outFolder += @"\HMDSharepoint_ImgOrderCSVs" + @"\"+SM_folderFormat;
+                                if (!Directory.Exists(outFolder))
+                                {
+                                    Directory.CreateDirectory(outFolder);
+                                }                        // Now write this to a CSV
+
+                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+
+                            }
+
                         }
 
                         // SORT XML THINGS OUT HERE!
@@ -245,25 +286,34 @@ namespace HMDSharepointChecker
             // For all shelfmarks this is then List<List<List<String>>>
         }
 
-        private static List<List<string>> mapFileNameToLabels(FileInfo[] Files, String tifFolders)
+        private static List<List<string>> mapFileNameToLabels(String inputShelfmark, FileInfo[] Files, String tifFolders)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
             List<String> shelfmarkLabels = new List<String>();
             string theShelfmark = "";
+            inputShelfmark = inputShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+
             List<string> fileNames = Files.Select(x => x.Name).ToList();
 
             // Define regular expressions to search for
             // 'initial' versions perform a looser search
-            var initialFrontMatterRegex = new Regex(@"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+(.)+))\.tif", RegexOptions.IgnoreCase);
+            string iFrontMatterReString = @"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+(.)+))\.tif";
+            var initialFrontMatterRegex = new Regex(iFrontMatterReString, RegexOptions.IgnoreCase);
 
-            var initialFolioRegex = new Regex(@"(.)+(f)([0-9])+(.)+\.tif", RegexOptions.IgnoreCase);
+            string iFolioReString = @"(.)+(f)([0-9])+(.)+\.tif";
+            var initialFolioRegex = new Regex(iFolioReString, RegexOptions.IgnoreCase);
 
-            var initialEndFlysheetsRegex = new Regex(@"(.)+((fse)[0-9]+(.)+)\.tif", RegexOptions.IgnoreCase);
+            string iEndFlysheetsReString = @"(.)+((fse)[0-9]+(.)+)\.tif";
+            var initialEndFlysheetsRegex = new Regex(iEndFlysheetsReString, RegexOptions.IgnoreCase);
 
-            var initialEndMatterRegex = new Regex(@"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
 
-            var initialNumericFolioRegex = new Regex(@"(.)+_([0-9])+(.)+\.tif", RegexOptions.IgnoreCase);
+            string iEndMatterReString = @"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif";
+            var initialEndMatterRegex = new Regex(iEndMatterReString, RegexOptions.IgnoreCase);
+
+            string iNumericFolioReString = @"(.)+_([0-9])+\.tif";
+            var initialNumericFolioRegex = new Regex(iNumericFolioReString, RegexOptions.IgnoreCase);
 
             // Sort into front matter, end flysheets, end matter and folios
             // Control shots jut shouldn't get picked up at all by any of these
@@ -294,6 +344,8 @@ namespace HMDSharepointChecker
             List<List<string>> folios = new List<List<String>>();
             List<List<string>> numericFiles = new List<List<String>>();
 
+            string folderDerivedShelfmark = "";
+        
             if (cFrontMatter.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
             {
                 // you can be pretty sure its DIPs compliant if you see any titles or any numbered folios
@@ -309,7 +361,24 @@ namespace HMDSharepointChecker
                     foreach (string fname in cFrontMatter)
                     {
                         List<String> fmat = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+[rv]))\.tif", RegexOptions.IgnoreCase);
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        folderDerivedShelfmark = derivedShelfmark;
+                        // replace the string
+                        string derivedFilename = split2.Last();
+                        string trimmedName = derivedFilename.Trim('f', 's');
+                        string noZerosName = trimmedName.TrimStart('0');
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+
+
+
+                        string matchString = derivedShelfmark+@"_(((fble)((fv)|(fr)))|((fs)[0-9]+[rv]))\.tif";
+                        var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
                             fmat.Add(fname);
@@ -339,16 +408,7 @@ namespace HMDSharepointChecker
                             else if (fsr)
                             {
                                 fmat.Add("");
-                                fmat.Add("Flysheet");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f', 's');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                                fmat.Add("Flysheet"); 
                                 string flysheetLabelString = "Front flysheet " + noZerosName;
                                 fmat.Add(flysheetLabelString);
                             }
@@ -356,15 +416,6 @@ namespace HMDSharepointChecker
                             {
                                 fmat.Add("");
                                 fmat.Add("Flysheet");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f', 's');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                                 string flysheetLabelString = "front flysheet " + noZerosName;
                                 fmat.Add(flysheetLabelString);
                             }
@@ -374,12 +425,6 @@ namespace HMDSharepointChecker
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 fmat.Add(errString);
                                 fmat.Add("Page");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
                                 fmat.Add(derivedFilename);
 
                             }
@@ -390,12 +435,6 @@ namespace HMDSharepointChecker
                             fmat.Add(fname);
                             fmat.Add(errString);
                             fmat.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            string derivedFilename = split2.Last();
                             fmat.Add(derivedFilename);
 
                         }
@@ -407,8 +446,25 @@ namespace HMDSharepointChecker
                     FOLExists = true;
                     foreach (string fname in cFolios)
                     {
+                        List<String> fmat = new List<String>();
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                        folderDerivedShelfmark = derivedShelfmark;
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+                        // replace the string
+                        string derivedFilename = split2.Last();
+                        string trimmedName = derivedFilename.Trim('f');
+                        string noZerosName = trimmedName.TrimStart('0');
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+
+                        string matchString = derivedShelfmark + @"_(f)([0-9])+([rv])\.tif";
                         List<String> fols = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+(f)([0-9])+([rv])\.tif", RegexOptions.IgnoreCase);
+                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
 
@@ -420,16 +476,6 @@ namespace HMDSharepointChecker
                             {
                                 fols.Add("");
                                 fols.Add("Page");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                theShelfmark = derivedShelfmark;
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                                 string frString = "Folio " + noZerosName;
                                 fols.Add(frString);
 
@@ -438,16 +484,6 @@ namespace HMDSharepointChecker
                             {
                                 fols.Add("");
                                 fols.Add("Page");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                theShelfmark = derivedShelfmark;
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                                 string frString = "Folio " + noZerosName;
                                 fols.Add(frString);
                             }
@@ -457,13 +493,6 @@ namespace HMDSharepointChecker
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 fols.Add(errString);
                                 fols.Add("Page");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                theShelfmark = derivedShelfmark;
-                                string derivedFilename = split2.Last();
                                 fols.Add(derivedFilename);
                             }
 
@@ -474,13 +503,6 @@ namespace HMDSharepointChecker
                             fols.Add(fname);
                             fols.Add(errString);
                             fols.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            theShelfmark = derivedShelfmark;
-                            string derivedFilename = split2.Last();
                             fols.Add(derivedFilename);
 
                         }
@@ -494,27 +516,28 @@ namespace HMDSharepointChecker
                     foreach (string fname in cNumericFolios)
                     {
                         List<String> nfols = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+_([0-9])+\.tif", RegexOptions.IgnoreCase);
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                        theShelfmark = derivedShelfmark;
+                        string derivedFilename = split2.Last();
+                        folderDerivedShelfmark = derivedShelfmark;
+
+
+                        string matchString = theShelfmark+@"_([0-9])+\.tif";
+
+                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
 
                             nfols.Add(fname);
                             nfols.Add("");
                             nfols.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            theShelfmark = derivedShelfmark;
-                            string derivedFilename = split2.Last();
-                            string noZerosName = derivedFilename.TrimStart('0');
-                            noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
-                            string frString = "Page " + noZerosName;
-                            nfols.Add(frString);
+                            nfols.Add(derivedFilename);
 
                         }
-
                         else
                         {
                             Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
@@ -522,13 +545,6 @@ namespace HMDSharepointChecker
                             nfols.Add(fname);
                             nfols.Add(errString);
                             nfols.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            theShelfmark = derivedShelfmark;
-                            string derivedFilename = split2.Last();
                             nfols.Add(derivedFilename);
                         }
                         numericFiles.Add(nfols);
@@ -540,8 +556,26 @@ namespace HMDSharepointChecker
                     EFSExists = true;
                     foreach (string fname in cEndFlysheets)
                     {
+                        List<String> fmat = new List<String>();
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        folderDerivedShelfmark = derivedShelfmark;
+
+                        // replace the string
+                        string derivedFilename = split2.Last();
+                        string trimmedName = derivedFilename.Trim('f','s','e');
+                        string noZerosName = trimmedName.TrimStart('0');
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+
                         List<String> efs = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+((fse)[0-9]+[rv])\.tif", RegexOptions.IgnoreCase);
+                        string matchString = derivedShelfmark + @"_((fse)[0-9]+[rv])\.tif";
+
+                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
                             efs.Add(fname);
@@ -551,15 +585,6 @@ namespace HMDSharepointChecker
                             {
                                 efs.Add(""); // error string
                                 efs.Add("Flysheet");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f', 's', 'e');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                                 string frString = "Back flysheet " + noZerosName;
                                 efs.Add(frString);
                             }
@@ -567,15 +592,6 @@ namespace HMDSharepointChecker
                             {
                                 efs.Add(""); // error string
                                 efs.Add("Flysheet");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
-                                string trimmedName = derivedFilename.Trim('f', 's', 'e');
-                                string noZerosName = trimmedName.TrimStart('0');
-                                noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                                 string frString = "Back flysheet " + noZerosName;
                                 efs.Add(frString);
                             }
@@ -584,12 +600,6 @@ namespace HMDSharepointChecker
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 efs.Add(errString); // error string
                                 efs.Add("Flysheet");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
                                 efs.Add(derivedFilename);
                             }
                         }
@@ -599,12 +609,6 @@ namespace HMDSharepointChecker
                             efs.Add(fname);
                             efs.Add(errString);
                             efs.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            string derivedFilename = split2.Last();
                             efs.Add(derivedFilename);
 
                         }
@@ -616,8 +620,20 @@ namespace HMDSharepointChecker
                     EMExists = true;
                     foreach (string fname in cEndMatter)
                     {
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                        string derivedFilename = split2.Last();
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        folderDerivedShelfmark = derivedShelfmark;
+
+                        string matchString = derivedShelfmark + @"_(((fb)((rigv)|(rigr)|(spi))))\.tif";
+
                         List<String> ema = new List<String>();
-                        var match = Regex.Match(fname, @"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif", RegexOptions.IgnoreCase);
+                        var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
                             ema.Add(fname);
@@ -648,12 +664,6 @@ namespace HMDSharepointChecker
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 ema.Add(errString);
                                 ema.Add("Page");
-                                string[] split = fname.Split('.');
-                                string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                                string fileExtension = split.Last(); // tif
-                                string[] split2 = shelfmark_filename.Split('_');
-                                string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                                string derivedFilename = split2.Last();
                                 ema.Add(derivedFilename);
                             }
 
@@ -665,12 +675,6 @@ namespace HMDSharepointChecker
                             ema.Add(fname);
                             ema.Add(errString);
                             ema.Add("Page");
-                            string[] split = fname.Split('.');
-                            string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
-                            string fileExtension = split.Last(); // tif
-                            string[] split2 = shelfmark_filename.Split('_');
-                            string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
-                            string derivedFilename = split2.Last();
                             ema.Add(derivedFilename);
                         }
                         endMatter.Add(ema);
@@ -696,12 +700,12 @@ namespace HMDSharepointChecker
 
                 if (containsDIPSNames && numFOLExists) // if numerically labelled folios exist alongside any DIPS compliant names...
                 {
-                    // Need this to trigger some writing to sharepoint - BROKEN FOR NOW.
-                    // List<string> errorFlag = new List<string> { "Mixture of DIPS-compliant and non-compliant filenames in this shelfmark!" };
-                    //allFilesSorted.flagStatus.Add(errorFlag);
-                    // allFilesSorted.Add(errorFlag);
-                    Console.WriteLine("Mixture of DIPS-compliant and non-compliant filenames in shelfmark {0}", theShelfmark);
+                    //TODO:
+                    // Need this to trigger some writing to sharepoint - Not yet working.
+
+                    Console.WriteLine("Mixture of DIPS-compliant and non-compliant filenames in shelfmark {0}", folderDerivedShelfmark);
                     // Just write this to console for now! Also would write to sharepoint for this shelfmark
+
                 }
 
                 foreach (List<String> fmList in frontMatter)
