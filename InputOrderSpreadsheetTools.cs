@@ -787,7 +787,7 @@ namespace HMDSharepointChecker
 
             try // to write the csv...
             {
-                const char sep = ',';
+                const char sep = '\t';
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
                 string fNameString = "ImageOrder";
@@ -807,6 +807,9 @@ namespace HMDSharepointChecker
                 {
                     using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
                     {
+                        csvFile.Configuration.Delimiter = "\t";
+                        //csvFile.Configuration.HasExcelSeparator = true;
+
                         foreach (var header in strHeaders)
                         {
                             csvFile.WriteField(header);
