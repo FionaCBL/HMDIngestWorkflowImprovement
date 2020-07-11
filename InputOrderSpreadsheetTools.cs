@@ -120,6 +120,9 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
+                                folderShelfmark = folderShelfmark.TrimEnd('_');
+
+
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
 
                                 outFolder += testTifFolder;
@@ -155,6 +158,8 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
+                                folderShelfmark = folderShelfmark.TrimEnd('_'); // just testing this, might remove in future.
+
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
 
                                 outFolder += testTifFolder;
