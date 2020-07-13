@@ -796,7 +796,7 @@ namespace HMDSharepointChecker
                 if (File.Exists(outPath))
                 {
                     var time = DateTime.Now;
-                    string formattedTime = time.ToString("yyyyMMdd_hh-mm-ss");
+                    string formattedTime = time.ToString("yyyyMMdd_HH-mm-ss");
                     string altOutPath = outFolder + @"\" + fNameString + "_" + formattedTime + ".csv";
                     outPath = altOutPath;
 
