@@ -236,7 +236,8 @@ namespace HMDSharepointChecker
                             {
                                 if (env == "test")
                                 {
-                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnBySingleShelfmark(spURL, spList, "ALTOXMLCheck", shelfmark, xmlErrMessage));
+                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, xmlErrMessage));
+                                    //Assert.IsTrue(SharepointTools.WriteToSharepointColumnBySingleShelfmark(spURL, spList, "ALTOXMLCheck", shelfmark, xmlErrMessage));
                                 }
                                 else if (env == "prod")
                                 {

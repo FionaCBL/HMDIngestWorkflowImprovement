@@ -216,7 +216,7 @@ namespace HMDSharepointChecker
                     // Try by ID instead...
                     foreach (List<String> item in badShelfmarks)
                     {
-                        Int32 ID = Int32.Parse(item[0]);
+                        var ID = item[0];
                         String SM = item[1];
                         Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, badShelfmarkMessage));
                     }
