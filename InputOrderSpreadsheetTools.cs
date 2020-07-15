@@ -8,35 +8,34 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HMDSharepointChecker
 {
+    
     class InputOrderSpreadsheetTools
     {
-        public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<List<String>> sharepointOut, String env, String spURL, String spList)
+        public static List<List<List<String>>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList)
         {
             List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
             List<List<List<String>>> allShelfmarkTIFAndLabels = new List<List<List<String>>>();
 
 
-            for (int i = 1; i < sharepointOut.Count; i++) // need this to skip the first row (titles)
+            foreach(var item in sharepointOut)
             {
-                List<String> item = sharepointOut[i];
                 List<String> shelfmarkTIFs = new List<String>();
-
                 List<List<String>> shelfmarkLabels = new List<List<String>>();
                 bool validPath = false;
-                var itemID = item[0];
-                var shelfmark = item[1];
+                var itemID = item.ID;
+                var shelfmark = item.Shelfmark;
 
-                if (item[5] != "false")
+                if (!item.SourceFolderValid)
                 {
                     string sourceFolder = "";
 
-                    if (string.IsNullOrEmpty(item[6]))
+                    if (string.IsNullOrEmpty(item.FullSourceFolderPath))
                     {
-                        sourceFolder = item[2];
+                        sourceFolder = item.SourceFolderPath;
                     }
                     else
                     {
-                        sourceFolder = item[6];
+                        sourceFolder = item.FullSourceFolderPath;
                     }
 
                     // Once you've got sourceFolder, need to get into the actual image folders...

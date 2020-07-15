@@ -207,17 +207,17 @@ namespace HMDSharepointChecker
                 // Add in Shelfmark protected chars check here
                 String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
                 Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
-                List<List<String>> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
+                List<HMDObject> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
                 if (badShelfmarks.Count != 0)
                 {
                     // now we need to write to sharepoint by shelfmark
                     String badShelfmarkMessage = "Protected character found in shelfmark";
                     //Assert.IsTrue(SharepointTools.WriteToSharepointColumnByShelfmark(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, badShelfmarks));
                     // Try by ID instead...
-                    foreach (List<String> item in badShelfmarks)
+                    foreach (var item in badShelfmarks)
                     {
-                        var ID = item[0];
-                        String SM = item[1];
+                        var ID = item.ID;
+                        String SM = item.Shelfmark;
                         Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, badShelfmarkMessage));
                     }
                 }

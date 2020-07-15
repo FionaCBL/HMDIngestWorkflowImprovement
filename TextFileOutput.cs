@@ -6,7 +6,7 @@ namespace HMDSharepointChecker
 {
     class TextOutputFunctions
     {
-        public static bool OutputListOfLists(List<List<String>> HMDOut, string suffix) 
+        public static bool OutputListOfLists(List<HMDObject> HMDOut, string suffix) 
         {
 
             bool fError = false;
