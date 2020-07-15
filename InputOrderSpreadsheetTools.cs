@@ -394,11 +394,13 @@ namespace HMDSharepointChecker
                 bool numFOLExists = false;
                 if (cFrontMatter.Any())
                 {
-                    FileLabels frontMatterLabels = new FileLabels();
 
                     FMExists = true;
                     foreach (string fname in cFrontMatter)
+
                     {
+                        FileLabels frontMatterLabels = new FileLabels();
+
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                         string fileExtension = split.Last(); // tif
@@ -484,11 +486,12 @@ namespace HMDSharepointChecker
                 }
                 if (cFolios.Any())
                 {
-                    FileLabels folioLabels = new FileLabels();
 
                     FOLExists = true;
                     foreach (string fname in cFolios)
                     {
+                        FileLabels folioLabels = new FileLabels();
+
                         List<String> fmat = new List<String>();
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
@@ -553,11 +556,12 @@ namespace HMDSharepointChecker
                 // sort out numeric foliation here
                 if (cNumericFolios.Any())
                 {
-                    FileLabels numFLabels = new FileLabels();
 
                     numFOLExists = true;
                     foreach (string fname in cNumericFolios)
                     {
+                        FileLabels numFLabels = new FileLabels();
+
                         List<String> nfols = new List<String>();
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
@@ -592,11 +596,12 @@ namespace HMDSharepointChecker
 
                 if (cEndFlysheets.Any())
                 {
-                    FileLabels efsLabels = new FileLabels();
 
                     EFSExists = true;
                     foreach (string fname in cEndFlysheets)
                     {
+                        FileLabels efsLabels = new FileLabels();
+
                         List<String> fmat = new List<String>();
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
@@ -658,11 +663,12 @@ namespace HMDSharepointChecker
                 }
                 if (cEndMatter.Any())
                 {
-                    FileLabels emLabels = new FileLabels();
 
                     EMExists = true;
                     foreach (string fname in cEndMatter)
                     {
+                        FileLabels emLabels = new FileLabels();
+
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                         string fileExtension = split.Last(); // tif
