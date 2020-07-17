@@ -190,8 +190,12 @@ namespace HMDSharepointChecker
                                 folderShelfmark = folderShelfmark.TrimEnd('_'); // just testing this, might remove in future.
 
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                               // if (testTifFolder.ToUpper().ToLower().Contains(@"\\tif"))
+                                //{
+                                //    testTifFolder = tifFolder.Split('\\')[1];
+                               // }
 
-                                outFolder += testTifFolder;
+                                outFolder += testTifFolder; 
                                 if (!Directory.Exists(outFolder))
                                 {
                                     Directory.CreateDirectory(outFolder);
@@ -266,11 +270,18 @@ namespace HMDSharepointChecker
                                 if (env == "test")
                                 {
                                     Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, xmlErrMessage));
-                                    //Assert.IsTrue(SharepointTools.WriteToSharepointColumnBySingleShelfmark(spURL, spList, "ALTOXMLCheck", shelfmark, xmlErrMessage));
                                 }
                                 else if (env == "prod")
                                 {
                                     Console.WriteLine("Holding off on populting columns in Sharepoint prod version for now");
+                                }
+                            }
+                            else
+                            { // nothing wrong, just write an valid status
+                                if (env == "test")
+                                {
+                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, "Valid"));
+
                                 }
                             }
 

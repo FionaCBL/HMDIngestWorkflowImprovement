@@ -33,7 +33,10 @@ namespace HMDSharepointChecker
         public string FullSourceFolderPath { get; set; }
         public bool SourceFolderPathValidElsewhere { get; set; }
 
-        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid)
+        public bool BadShelfmark { get; set; }
+
+
+        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid, bool badSM)
         {
             ID = id;
             Shelfmark = shelfmark;
@@ -43,6 +46,7 @@ namespace HMDSharepointChecker
             SourceFolderValid = sfvalid;
             FullSourceFolderPath = fsfpath;
             SourceFolderPathValidElsewhere = altvalid;
+            BadShelfmark = badSM;
 
         }
         public HMDObject()
@@ -55,6 +59,7 @@ namespace HMDSharepointChecker
             SourceFolderValid = false;
             FullSourceFolderPath = null;
             SourceFolderPathValidElsewhere = false;
+            BadShelfmark = false;
         }
 
     }
@@ -207,8 +212,15 @@ namespace HMDSharepointChecker
 
                         catch(Exception ex)
                         {
-                            Console.WriteLine("No source folder found! Exception {0}", ex);
+                            Console.WriteLine("Could not retrieve 'Source Folder' entry for shelfmark {0}",itemTitle);
+                            thisItem.ID = itemID;
+                            thisItem.Title = itemTitle;
+                            thisItem.Location = null; // Still want to write out null values of item location so we can report in sharepoint later!
+                            itemsFound.Add(thisItem);
+
                             continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
+
+                        
                         }
                         if (itemLocation != null)
                         {
@@ -217,16 +229,7 @@ namespace HMDSharepointChecker
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = itemLocation;
-                        
 
-                        }
-                        else
-                        {
-                            Console.WriteLine("No source folder found for shelfmark {0}", itemTitle);
-                            thisItem.ID = itemID;
-                            thisItem.Title = itemTitle;
-                            thisItem.Location = itemLocation; // Still want to write out null values of item location so we can report in sharepoint later!
-                            continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
                         }
 
                         itemsFound.Add(thisItem);
@@ -268,97 +271,113 @@ namespace HMDSharepointChecker
                 string ID = item.ID;
                 string Shelfmark = item.Title;
                 string sourceFolderSP = item.Location;
-                string sourceFolder = sourceFolderSP.Replace("////", "//");
-                sourceFolder = sourceFolder.TrimEnd(); // trims whitespace from end
-                var sf1 = sourceFolder;
-                sourceFolder = sourceFolder.Replace("/", @"\");
-                var sf2 = sourceFolder;
-                sourceFolder = sourceFolder.Replace(@"file:", @"");
-                var sf3 = sourceFolder;
-                if (sourceFolder.Contains(@"\\\"))
-                {
-                    // I haven't seen a case where this makes the source folder fail yet, so this isn't fatal
-                    sourceFolder = sourceFolder.Replace(@"\\\", @"\\"); // this is there in some cases...
-                    var sf4 = sourceFolder;
-                }
-                if (sourceFolder.Contains(@"%20"))
-                {
-                    sourceFolder = sourceFolder.Replace(@"%20", @" ");
-                }
 
-                var sfAlt2 = sourceFolder.Split('\\')[2]; // Get the part of the string with server name in
-
-                try
+                if (!String.IsNullOrEmpty(sourceFolderSP))
                 {
-                    string sfAlt = sourceFolder.Replace(sfAlt2, @"ad\collections");
-                    bool DirectoryExists = false;
-                    bool altDirectoryExists = false;
-                    if (Directory.Exists(sourceFolder)) // Optimal case - the URL in sharepoint is correct!
+
+                    string sourceFolder = sourceFolderSP.Replace("////", "//");
+                    sourceFolder = sourceFolder.TrimEnd(); // trims whitespace from end
+                    var sf1 = sourceFolder;
+                    sourceFolder = sourceFolder.Replace("/", @"\");
+                    var sf2 = sourceFolder;
+                    sourceFolder = sourceFolder.Replace(@"file:", @"");
+                    var sf3 = sourceFolder;
+                    if (sourceFolder.Contains(@"\\\"))
                     {
-                        sourceFolderValid = true;
-                        DirectoryExists = true;
-                        fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sourceFolder);
+                        // I haven't seen a case where this makes the source folder fail yet, so this isn't fatal
+                        sourceFolder = sourceFolder.Replace(@"\\\", @"\\"); // this is there in some cases...
+                        var sf4 = sourceFolder;
                     }
-                    else
+                    if (sourceFolder.Contains(@"%20"))
                     {
-                        altDirectoryExists = Directory.Exists(sfAlt);
-                        if (altDirectoryExists) // Next most-optimal case - URL in sharepoint is wrong but it's just the server
+                        sourceFolder = sourceFolder.Replace(@"%20", @" ");
+                    }
+
+                    var sfAlt2 = sourceFolder.Split('\\')[2]; // Get the part of the string with server name in
+
+                    try
+                    {
+                        string sfAlt = sourceFolder.Replace(sfAlt2, @"ad\collections");
+                        bool DirectoryExists = false;
+                        bool altDirectoryExists = false;
+                        if (Directory.Exists(sourceFolder)) // Optimal case - the URL in sharepoint is correct!
                         {
-                            sourceFolderValidElsewhere = true;
-                            fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sfAlt);
-             
+                            sourceFolderValid = true;
+                            DirectoryExists = true;
+                            fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sourceFolder);
                         }
                         else
                         {
-                            fullSourceFolderPath = "";
+                            altDirectoryExists = Directory.Exists(sfAlt);
+                            if (altDirectoryExists) // Next most-optimal case - URL in sharepoint is wrong but it's just the server
+                            {
+                                sourceFolderValidElsewhere = true;
+                                fullSourceFolderPath = ConstructFullFolderName(Shelfmark, sfAlt);
+
+                            }
+                            else
+                            {
+                                fullSourceFolderPath = "";
+                            }
+
+
                         }
 
+                        if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
+                        else if (altDirectoryExists)
+                        {
+                            Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
+                        }
+                        else
+                        {
+                            Console.WriteLine("ERROR: Folder {0} not found", sourceFolder);
+
+                        }
+                        string folderStatus = DirectoryExists.ToString();
+                        HMDItem.ID = ID;
+                        HMDItem.Shelfmark = Shelfmark;
+                        HMDItem.SourceFolderPath = sourceFolder;
+                        HMDItem.FolderStatus = folderStatus;
+                        HMDItem.AltDirectoryExists = altDirectoryExists;
+                        HMDItem.SourceFolderValid = sourceFolderValid;
+                        HMDItem.FullSourceFolderPath = fullSourceFolderPath;
+                        HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
+
 
                     }
-
-                    if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
-                    else if (altDirectoryExists)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
+                        Console.WriteLine("ERROR: Shelfmark {0}\n Exception: {1}", Shelfmark, ex);
+                        bool DirectoryStatus = false;
+                        bool altDirectoryStatus = false;
+                        HMDItem.ID = ID;
+                        HMDItem.Shelfmark = Shelfmark;
+                        HMDItem.SourceFolderPath = sourceFolder;
+                        HMDItem.FolderStatus = DirectoryStatus.ToString();
+                        HMDItem.AltDirectoryExists = altDirectoryStatus;
+                        HMDItem.SourceFolderValid = sourceFolderValid;
+                        HMDItem.FullSourceFolderPath = fullSourceFolderPath;
+                        HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
+                        folderExistenceStatus.Add(HMDItem);
+                        continue;
+
+                        // really need to handle this exception properly!
                     }
-                    else
-                    {
-                        Console.WriteLine("ERROR: Folder {0} not found", sourceFolder);
-
-                    }
-                    string folderStatus = DirectoryExists.ToString();
-                    HMDItem.ID = ID;
-                    HMDItem.Shelfmark = Shelfmark;
-                    HMDItem.SourceFolderPath = sourceFolder;
-                    HMDItem.FolderStatus = folderStatus;
-                    HMDItem.AltDirectoryExists = altDirectoryExists;
-                    HMDItem.SourceFolderValid = sourceFolderValid;
-                    HMDItem.FullSourceFolderPath = fullSourceFolderPath;
-                    HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
-
-
                 }
-                catch
+                else // in case you're passed something with a null value for source folder
                 {
                     bool DirectoryStatus = false;
                     bool altDirectoryStatus = false;
                     HMDItem.ID = ID;
                     HMDItem.Shelfmark = Shelfmark;
-                    HMDItem.SourceFolderPath = sourceFolder;
+                    HMDItem.SourceFolderPath = null;
                     HMDItem.FolderStatus = DirectoryStatus.ToString();
                     HMDItem.AltDirectoryExists = altDirectoryStatus;
-                    HMDItem.SourceFolderValid = sourceFolderValid;
-                    HMDItem.FullSourceFolderPath = fullSourceFolderPath;
-                    HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
-
-
-                    // really need to handle this exception properly!
+                    HMDItem.SourceFolderValid = false;
+                    HMDItem.FullSourceFolderPath = null;
+                    HMDItem.SourceFolderPathValidElsewhere = false;
                 }
                 folderExistenceStatus.Add(HMDItem);
-
-
-                // Need to decide how to do reporting with this - final bool shows whether the output folder needs flagging.
-                // Source folder needs flagging if: source folder not found at all, or source folder found under \\ad\collections but not under the location given
 
 
             }
@@ -497,6 +516,12 @@ namespace HMDSharepointChecker
         (1UL << c & 0xD4008404FFFFFFFFUL) != 0 :
         c == '\\' || c == '|';
 
+        public static bool FilePathHasInvalidChars(string path)
+        {
+
+            return (!string.IsNullOrEmpty(path) && path.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0);
+        }
+
         public static List<HMDObject> BadShelfmarkNames(List<HMDObject> itemList)
         {
             List<HMDObject> badShelfmarksIDs = new List<HMDObject>();
@@ -505,20 +530,26 @@ namespace HMDSharepointChecker
             {
                 List<String> flagShelfmark = new List<String>();
                 string Shelfmark = item.Shelfmark;
-                foreach (char character in Shelfmark)
-                {
-                    if (IsInvalidFileNameChar(character))
-                    {
-                        protectedCharsFound = true;
 
-                    }
-                }
+                // Deprecated:
+                //foreach (char character in Shelfmark)
+                //{
+                //   if (IsInvalidFileNameChar(character))
+                //  {
+                //      protectedCharsFound = true;
+
+                //  }
+                //}
+                // New method:
+                protectedCharsFound = FilePathHasInvalidChars(Shelfmark);
                 if (protectedCharsFound)
                 {
-                    badShelfmarksIDs.Add(item);
+                    item.BadShelfmark = true;
                 }
+                badShelfmarksIDs.Add(item);
+
             }
-            
+
             return badShelfmarksIDs;
         }
 
@@ -602,7 +633,6 @@ namespace HMDSharepointChecker
                 {
                     using (ClientContext clientContext = new ClientContext(SPSite))
                     {
-                        // clientcontext.Web.Lists.GetById - This option also can be used to get the list using List GUID
                         // This value is NOT List internal name
                         List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
 
@@ -631,86 +661,7 @@ namespace HMDSharepointChecker
         }
 
         // Add writing functionality here...
-        public static bool WriteToSharepointColumnByShelfmark(String SPSite, String SPListName, String writeCol, List<String> shelfmarks)
-        {
-            bool fError = false;
-
-            try
-            {
-
-                ClientContext ctx = new ClientContext(SPSite);
-                List list = ctx.Web.Lists.GetByTitle(SPListName);
-
-                foreach (String shelfmark in shelfmarks)
-                {
-
-                    CamlQuery camlQuery = new CamlQuery();
-                    camlQuery.ViewXml = "<Where><Contains><FieldRef Name ='Title'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where > ";
-                    ListItemCollection items = list.GetItems(camlQuery);
-                    ctx.Load(items); // loading all the fields
-                    ctx.ExecuteQuery();
-
-                    foreach (var item in items)
-                    {
-                        if (item["Shelfmark"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
-                        {
-                            item[writeCol] = "BadCharacters";
-                            item.Update(); // remember changes
-                            ctx.ExecuteQuery(); // commit changes to the server
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
-                fError = true;
-                return !fError;
-            }
-
-            return !fError;
-
-
-        }
-        public static bool WriteToSharepointColumnBySingleShelfmark(String SPSite, String SPListName, String writeCol, String shelfmark, String Message)
-        {
-            bool fError = false;
-            using (ClientContext clientContext = new ClientContext(SPSite))
-            {
-                try
-                {
-                    List targetList = clientContext.Web.Lists.GetByTitle(SPListName);
-                    clientContext.Load(targetList);
-                    //CamlQuery camlQuery = new CamlQuery();
-                    //camlQuery.ViewXml = "<View><Query><Where><Contains><FieldRef Name ='Title'/><Value Type='Text'>" + shelfmark + "</ Value ></ Contains ></ Where ></Query></View> ";
-                    CamlQuery camlQuery = CamlQuery.CreateAllItemsQuery();
-                    ListItemCollection items = targetList.GetItems(camlQuery);
-                    clientContext.Load(items); // loading all the fields
-                    clientContext.ExecuteQuery();
-
-                    foreach (var item in items)
-                    {
-                        if (item.FieldValues["Title"].ToString()== shelfmark) // really need to make sure this is the right shelfmark!
-                        {
-                            item.FieldValues[writeCol] = Message;
-                            item.Update(); // remember changes
-                            clientContext.ExecuteQuery(); // commit changes to the server
-                        }
-                    }
-
-                }
-
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error writing to Sharepoint. Exception: {0}", ex);
-                    fError = true;
-                    return !fError;
-                }
-            }
-
-                return !fError;
-
-            }
+       
         public static bool WriteToSharepointColumnByID(String SPSite, String SPListName, String writeCol, String shelfmark, string ID, String Message)
         {
           
@@ -727,32 +678,20 @@ namespace HMDSharepointChecker
                     clientContext.Load(item); // loading all the fields
                     clientContext.ExecuteQuery();
 
-                    if (item.FieldValues["Title"].ToString() == shelfmark) // really need to make sure this is the right shelfmark!
+                    if (item.FieldValues["Title"].ToString() == shelfmark) // double check you're writing to the thing you think you're writing to!
                     {
                         if (item.FieldValues.ContainsKey(writeCol))
                         {
                         var currentColumnValue = item[writeCol];
                         item[writeCol] = Message;
-                        item.Update(); // remember changes
-                        clientContext.ExecuteQuery(); // commit changes to the server
+                        item.Update();
+                        clientContext.ExecuteQuery(); // commits any changes to the sharepoint site
                         }
                         else
                         {
                             Console.WriteLine("The sharepoint column you're trying to write to does not exist!");
                         }
                     }
-
-                    // For debugging - delete before pushing commit
-                  /*
-                        // Check things have written!
-                        List resultList = clientContext.Web.Lists.GetByTitle(SPListName);
-                        clientContext.Load(resultList);
-                        SP.ListItem resultItem = targetList.GetItemById(theID);
-                        clientContext.Load(resultItem); // loading all the fields
-                        clientContext.ExecuteQuery();
-                        var updatedField = item.FieldValues[writeCol];
-                 */
-                    
 
                 }
 

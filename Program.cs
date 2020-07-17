@@ -208,23 +208,31 @@ namespace HMDSharepointChecker
                 String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
                 Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
                 List<HMDObject> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
-                if (badShelfmarks.Count != 0)
+                String shelfmarkCharacterStatus = "";
+
+                foreach (var item in badShelfmarks)
                 {
-                    // now we need to write to sharepoint by shelfmark
-                    String badShelfmarkMessage = "Protected character found in shelfmark";
-                    //Assert.IsTrue(SharepointTools.WriteToSharepointColumnByShelfmark(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, badShelfmarks));
-                    // Try by ID instead...
-                    foreach (var item in badShelfmarks)
+                    var ID = item.ID;
+                    String SM = item.Shelfmark;
+                    if (item.BadShelfmark)
                     {
-                        var ID = item.ID;
-                        String SM = item.Shelfmark;
-                        Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, badShelfmarkMessage));
+                        shelfmarkCharacterStatus = "Protected character(s) found";
                     }
+                    else
+                    {
+                        shelfmarkCharacterStatus = "Valid";
+
+                    }
+                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, shelfmarkCharacterStatus));
                 }
+                
+
             }
 
             // Get the labels (image order, image type etc) for all shelfmarks passed into this function
             // Write these out in an image order csv 
+
+
             // Also runs ALTO XML checks - do they exist with the same names as TIFs and in the same number as TIFs?
             // Are they version 2.0 or older?
             if (runImageOrderGenerationXMLChecks)
@@ -252,6 +260,7 @@ namespace HMDSharepointChecker
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
 
+            
             return;            
         }
 
