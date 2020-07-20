@@ -42,12 +42,29 @@ namespace HMDSharepointChecker
     {
         public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList)
         {
-            List<List<String>> sourceFolderXMLs = new List<List<String>>(); // maybe don't need?
             List<List<FileLabels>> allShelfmarkTIFAndLabels = new List<List<FileLabels>>();
+            Console.WriteLine("=======================================\nGenerating image order csv and performing ALTOXML checks...\n=======================================");
 
-
-            foreach(var item in sharepointOut)
+            var thisItem = 1;
+            foreach (var item in sharepointOut)
             {
+                if (sharepointOut.Count > 20)
+                {
+
+
+                    if (thisItem % 10 == 0)
+                    {
+                        Console.WriteLine("Processing item {0} of {1}", thisItem,sharepointOut.Count);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Processing item {0} of {1}", thisItem, sharepointOut.Count);
+
+                }
+                thisItem += 1;
+
+
                 List<String> shelfmarkTIFs = new List<String>();
                 List<FileLabels> shelfmarkLabels = new List<FileLabels>();
                 bool validPath = false;
@@ -74,7 +91,7 @@ namespace HMDSharepointChecker
                     sourceFolder = sourceFolder.TrimEnd('\\');
                     sourceFolder = sourceFolder.ToLower();
 
-                    Console.WriteLine("Source Folder: {0}", sourceFolder);
+                    //Console.WriteLine("Source Folder: {0}", sourceFolder);
                     try
                     {
                         if (sourceFolder.ToUpper().ToLower().Contains("tif"))
@@ -87,11 +104,11 @@ namespace HMDSharepointChecker
                             var subFolders = Directory.GetDirectories(sourceFolder);
                             foreach (var subFolder in subFolders)
                             {
-                                Console.WriteLine("Testing subFolder: {0}", subFolder);
+                                //Console.WriteLine("Testing subFolder: {0}", subFolder);
                                 if (subFolder.ToUpper().ToLower().Contains("tif"))
                                 {
                                     tifFolder = subFolder;
-                                    Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                 //   Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
                                 }
                             }
                         }
@@ -311,7 +328,6 @@ namespace HMDSharepointChecker
 
                         FileLabels errorList = new FileLabels(shelfmark, null, null, null, null );
                         errorList.FlagStatus = "TIF folder not found";
-
                         continue; // use continue for now, but will need to write out invalid path to a variable at some point
                     }
                 } // is source folder valid? 
@@ -319,7 +335,6 @@ namespace HMDSharepointChecker
                 {
                     FileLabels errorList = new FileLabels(shelfmark, null, null, null, null);
                     errorList.FlagStatus = "Invalid source folder";
-
                     // Got yourself a shelfmark that needs checking, so obviously things will fail here...
                     continue;
                 }

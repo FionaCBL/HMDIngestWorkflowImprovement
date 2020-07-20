@@ -67,24 +67,27 @@ namespace HMDSharepointChecker
     {
         public static bool SharepointSiteExists(string url)
         {
-            try
+            using (ClientContext ctx = new ClientContext(url))
             {
+                try
+                {
 
-                ClientContext clientContext = new ClientContext(url);
-                Web site = clientContext.Web;
-                clientContext.Load(site);
-                clientContext.ExecuteQuery();
-                var siteTitle = site.Title;
-                return !string.IsNullOrEmpty(siteTitle);
+                    Web site = ctx.Web;
+                    ctx.Load(site);
+                    ctx.ExecuteQuery();
+                    var siteTitle = site.Title;
+                    return !string.IsNullOrEmpty(siteTitle);
 
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Failed to find sharepoint site. " + ex.Message);
+                }
 
-                // Any exception returns false
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to find sharepoint site. " + ex.Message);
 
-                return false;
+                    // Any exception returns false
+
+                    return false;
+                }
             }
 
         }
@@ -94,12 +97,14 @@ namespace HMDSharepointChecker
 
             try
             {
-                ClientContext clientContext = new ClientContext(sharepointSite);
-                Web site = clientContext.Web;
-                clientContext.Load(site);
-                clientContext.ExecuteQuery();
-                var siteTitle = site.Title;
-                return siteTitle;
+                using (ClientContext ctx = new ClientContext(sharepointSite))
+                {
+                    Web site = ctx.Web;
+                    ctx.Load(site);
+                    ctx.ExecuteQuery();
+                    var siteTitle = site.Title.TrimEnd();
+                    return siteTitle;
+                }
             }
             catch
             {
@@ -112,20 +117,22 @@ namespace HMDSharepointChecker
 
             try
             {
-                ClientContext clientContext = new ClientContext(sURL);
-                Web oSite = clientContext.Web;
-                ListCollection collList = oSite.Lists;
-
-                clientContext.Load(collList);
-                clientContext.ExecuteQuery();
-
-
-                List<string> listNames = new List<string>();
-                foreach (SP.List oList in collList)
+                using (ClientContext clientContext = new ClientContext(sURL))
                 {
-                    listNames.Add(oList.Title);
+                    Web oSite = clientContext.Web;
+                    ListCollection collList = oSite.Lists;
+
+                    clientContext.Load(collList);
+                    clientContext.ExecuteQuery();
+
+
+                    List<string> listNames = new List<string>();
+                    foreach (SP.List oList in collList)
+                    {
+                        listNames.Add(oList.Title);
+                    }
+                    return listNames;
                 }
-                return listNames;
             }
             catch
             {
@@ -141,32 +148,34 @@ namespace HMDSharepointChecker
             {
 
 
-                ClientContext clientContext = new ClientContext(sURL);
-                SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
-
-                if (oList != null)
+                using (ClientContext clientContext = new ClientContext(sURL))
                 {
+                    SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
 
-                    clientContext.Load(oList.Fields);
-                    clientContext.ExecuteQuery();
-
-                    List<string> listColumns = new List<string>();
-
-                    foreach (SP.Field myField in oList.Fields)
+                    if (oList != null)
                     {
 
-                        var thingToPrint = myField.Title + ", " + myField.InternalName;
-                        Console.WriteLine(thingToPrint); // print this to get the internal name of columns
+                        clientContext.Load(oList.Fields);
+                        clientContext.ExecuteQuery();
 
-                        listColumns.Add(myField.Title);
+                        List<string> listColumns = new List<string>();
 
+                        foreach (SP.Field myField in oList.Fields)
+                        {
+
+                            var thingToPrint = myField.Title + ", " + myField.InternalName;
+                            Console.WriteLine(thingToPrint); // print this to get the internal name of columns
+
+                            listColumns.Add(myField.Title);
+
+                        }
+
+                        return listColumns;
                     }
-
-                    return listColumns;
-                }
-                else
-                {
-                    return null;
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
             catch
@@ -179,12 +188,13 @@ namespace HMDSharepointChecker
 
         public static List<HMDSPObject> GetSharePointListFieldContents(string sURL, string lName, string env, string inputvar)
         {
-           
-            
-                try
+            Console.Clear();
+            Console.WriteLine("=======================================\nRetrieving sharepoint list items\n=======================================");
+            try
+            {
+                using (ClientContext clientContext = new ClientContext(sURL))
                 {
 
-                    ClientContext clientContext = new ClientContext(sURL);
                     SP.List oList = clientContext.Web.Lists.GetByTitle(lName);
                     CamlQuery camlQuery = new CamlQuery();
                     var myQuery = @"<View><Query><Where><Contains>" + inputvar + @"</Contains></Where></Query></View>";
@@ -196,10 +206,25 @@ namespace HMDSharepointChecker
 
                     List<HMDSPObject> itemsFound = new List<HMDSPObject>();
 
+                    var itemCounter = 1;
                     foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
                     {
+                        if (oItems.Count > 20)
+                        {
+                            if (itemCounter % 10 == 0)
+                            {
+                                Console.WriteLine("{0}/{1}", itemCounter, oItems.Count);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("{0}/{1}", itemCounter, oItems.Count);
+
+                        }
+                        itemCounter += 1;
+
                         List<string> listItem = new List<string>();
-                        HMDSPObject thisItem = new HMDSPObject("","",""); // create empty hmdobject
+                        HMDSPObject thisItem = new HMDSPObject("", "", ""); // create empty hmdobject
 
 
                         var itemID = oListItem.FieldValues["ID"].ToString();
@@ -210,9 +235,9 @@ namespace HMDSharepointChecker
                             itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
                         }
 
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
-                            Console.WriteLine("Could not retrieve 'Source Folder' entry for shelfmark {0}",itemTitle);
+                            Console.WriteLine("Could not retrieve 'Source Folder' entry for shelfmark {0}\nException: {1}", itemTitle, ex);
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = null; // Still want to write out null values of item location so we can report in sharepoint later!
@@ -220,12 +245,12 @@ namespace HMDSharepointChecker
 
                             continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
 
-                        
+
                         }
                         if (itemLocation != null)
                         {
                             String rowString = String.Format("ID: {0} \t Project: {1} \t Title: {2} \t Location: {3}", itemID, oListItem.FieldValues["Project_x0020_Name"].ToString(), itemTitle, itemLocation);
-                            Console.WriteLine(rowString);
+                            //Console.WriteLine(rowString);
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = itemLocation;
@@ -238,11 +263,12 @@ namespace HMDSharepointChecker
                     return itemsFound;
 
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error - exception {0}", ex);
-                    return null;
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error - exception {0}", ex);
+                return null;
+            }
 
         }
 
@@ -257,17 +283,34 @@ namespace HMDSharepointChecker
 
 
             List<HMDObject> folderExistenceStatus = new List<HMDObject>();
+            Console.WriteLine("=======================================\nValidating Source Folder Paths\n=======================================");
+            var thisItem = 1;
 
             foreach (var item in itemList)
             {
+                if (itemList.Count > 20)
+                {
+
+
+                    if (thisItem % 10 == 0)
+                    {
+                        Console.WriteLine("Processing item {0} of {1}", thisItem, itemList.Count);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Processing item {0} of {1}", thisItem, itemList.Count);
+
+                }
+                thisItem += 1;
                 HMDObject HMDItem = new HMDObject(); // initialise new HMD object with null vals
                     
-                bool sourceFolderValid = false;
+                bool sourceFolderValid = false
+                    ;
                 bool sourceFolderValidElsewhere = false;
 
                 string fullSourceFolderPath = "";
 
-                //Console.WriteLine("{0} \t {1} \t {2}", item[0], item[1],item[2]);
                 string ID = item.ID;
                 string Shelfmark = item.Title;
                 string sourceFolderSP = item.Location;
@@ -323,12 +366,11 @@ namespace HMDSharepointChecker
 
                         }
 
-                        if (DirectoryExists) Console.WriteLine("Folder: {0} \t Exists: {1}", sourceFolder, DirectoryExists);
-                        else if (altDirectoryExists)
+                        if (!DirectoryExists && altDirectoryExists) 
                         {
                             Console.WriteLine("Folder: {0} \t Exists at {1}: {2}", sourceFolder, sfAlt, altDirectoryExists);
                         }
-                        else
+                        else if (!DirectoryExists && !altDirectoryExists)
                         {
                             Console.WriteLine("ERROR: Folder {0} not found", sourceFolder);
 
@@ -379,7 +421,7 @@ namespace HMDSharepointChecker
                 }
                 folderExistenceStatus.Add(HMDItem);
 
-
+                
             }
             return folderExistenceStatus;
 
@@ -388,8 +430,26 @@ namespace HMDSharepointChecker
         public static bool ReportSourceFolderStatus(string spURL, string spList, string SFCol, List<HMDObject> SFStatus)
         {
             bool fError = false;
+            var itemCounter = 1;
             foreach (var item in SFStatus)
             {
+                if (SFStatus.Count > 20)
+                {
+
+
+                    if (itemCounter % 10 == 0)
+                    {
+                        Console.WriteLine("Processing item {0} of {1}", itemCounter, SFStatus.Count);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Processing item {0} of {1}", itemCounter, SFStatus.Count);
+
+                }
+                itemCounter += 1;
+
+
                 String shelfmark = item.Shelfmark;
                 bool validSourceFolder = item.SourceFolderValid;
                 bool validAltSourceFolder = item.SourceFolderPathValidElsewhere;
@@ -516,10 +576,14 @@ namespace HMDSharepointChecker
         (1UL << c & 0xD4008404FFFFFFFFUL) != 0 :
         c == '\\' || c == '|';
 
-        public static bool FilePathHasInvalidChars(string path)
+        public static bool FilePathHasInvalidChars(string testFilePath)
         {
+            bool stringExists = !string.IsNullOrEmpty(testFilePath);
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            
+            bool hasBadChars = testFilePath.IndexOfAny(invalidChars) >=0;
 
-            return (!string.IsNullOrEmpty(path) && path.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0);
+            return (stringExists && hasBadChars);
         }
 
         public static List<HMDObject> BadShelfmarkNames(List<HMDObject> itemList)
@@ -532,16 +596,16 @@ namespace HMDSharepointChecker
                 string Shelfmark = item.Shelfmark;
 
                 // Deprecated:
-                //foreach (char character in Shelfmark)
-                //{
-                //   if (IsInvalidFileNameChar(character))
-                //  {
-                //      protectedCharsFound = true;
+                foreach (char character in Shelfmark)
+                {
+                   if (IsInvalidFileNameChar(character))
+                  {
+                      protectedCharsFound = true;
 
-                //  }
-                //}
+                  }
+                }
                 // New method:
-                protectedCharsFound = FilePathHasInvalidChars(Shelfmark);
+                //protectedCharsFound = FilePathHasInvalidChars(Shelfmark);
                 if (protectedCharsFound)
                 {
                     item.BadShelfmark = true;
@@ -592,10 +656,10 @@ namespace HMDSharepointChecker
 
                     }
                 }
-                else
-                {
-                    Console.WriteLine("The SharePoint column you're trying to add already exists!");
-                }
+                //else // this just isn't needed unless debugging
+                //{
+                //    Console.WriteLine("The SharePoint column you're trying to add already exists!");
+                //}
                 return !fError;
             }
             catch (Exception ex)

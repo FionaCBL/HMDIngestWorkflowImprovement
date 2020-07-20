@@ -71,10 +71,11 @@ namespace HMDSharepointChecker
         }
         static void Main(string[] args)
         {
+            var startTime = DateTime.Now;
 
             // Set the environment (use 'test' or 'prod')
             var env = "test";
-            bool debug = true;
+            bool debug = false;
 
             Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
             String inputEnv = Console.ReadLine();
@@ -91,7 +92,7 @@ namespace HMDSharepointChecker
             String inputVariable = "";
             Assert.IsTrue(RunInitialTests(spURL));
 
-            Console.WriteLine("This program searches sharepoint using either projects or inidividual shelfmarks. Use shelfmarks? (yes/no)");
+            Console.WriteLine("This program searches sharepoint using either projects or individual shelfmarks. Use shelfmarks? (yes/no)");
             String useShelfmarksYN = Console.ReadLine();
             if (useShelfmarksYN.ToLower() == "yes")
             {
@@ -128,6 +129,12 @@ namespace HMDSharepointChecker
                         inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
 
                     }
+                }
+                else
+                {
+                    Console.WriteLine("Using default project {0}",project);
+                    inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
+
                 }
             }
 
@@ -195,6 +202,7 @@ namespace HMDSharepointChecker
             // Attempts to write the results to a sharepoint column for each row (== shelfmark)
             if (reportShelfmarkCheckStatus)
             {
+                Console.WriteLine("Writing source folder validation status to Sharepoint...");
                 String SharePointSourceFolderCheck = "SourceFolderValid";
                 Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointSourceFolderCheck));
                 Assert.IsTrue(SharepointTools.ReportSourceFolderStatus(spURL, "Digitisation Workflow", SharePointSourceFolderCheck, SourceFolderStatus));
@@ -204,14 +212,30 @@ namespace HMDSharepointChecker
             // Attempts to write the results to sharepoint column
             if (runShelfmarkCharacterChecks)
             {
+                Console.WriteLine("=======================================\nChecking shelfmarks for protected characters\n=======================================");
                 // Add in Shelfmark protected chars check here
                 String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
                 Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
                 List<HMDObject> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
                 String shelfmarkCharacterStatus = "";
 
+                var thisItem = 1;
+                
                 foreach (var item in badShelfmarks)
                 {
+                    if (badShelfmarks.Count > 20)
+                    {
+                        if (thisItem % 10 == 0)
+                        {
+                            Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
+
+                    }
+                    thisItem += 1;
                     var ID = item.ID;
                     String SM = item.Shelfmark;
                     if (item.BadShelfmark)
@@ -256,7 +280,9 @@ namespace HMDSharepointChecker
             // var sourceFolderXMLFiles = SharepointTools.GetSourceFolderXMLs(SourceFolderStatus, true);
             //Assert.IsNotNull(sourceFolderXMLFiles);
 
-
+            TimeSpan ts = DateTime.Now - startTime;
+            var runTime = ts.TotalSeconds.ToString();
+            Console.WriteLine("=======================================\nFinished in {0} seconds\n=======================================",runTime);
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
 
