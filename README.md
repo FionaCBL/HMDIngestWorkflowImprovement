@@ -5,15 +5,14 @@ This tool, written in [C#](https://en.wikipedia.org/wiki/C_Sharp_(programming_la
 ## Users
 The tool is supplied as a Windows executable file which can be run with no prior installation.
 
-To run, double-click the executable located in   
-```G:\Heritage Made Digital\05\Projects\Workflow\Validation of Ingest Workflow\SoftwareTesting```
-
-You will be presented with a series of yes/no options.
+To run, double-click the executable. You will be presented with a series of yes/no options.
 
 ### Environment
 
 Two environments exist within the software tool - `test` and `prod`. Using `test` sets up a test-based environment, only looks at the test sharepoint site and writes output files to your desktop. Using `prod` sets up the live production environment and uses the live HMD sharepoint.  
 **Currently writing-to-sharepoint functionality is not working, so both environments write to the user's desktop** 
+
+The tool then asks if you would like to search sharepoint using a shelfmark. Answer 'yes' here, followed by your shelfmark of choice (matching Sharepoint exactly!) to use this feature.
 
 You can also select a `project` to run over. The default project is environment-dependent, but the program will tell you what it is currently set to. To change it, type `yes` (then `Enter`) and type the name of the project to analyse. At the moment 
 this is required to match the value in SharePoint exactly.
@@ -23,17 +22,11 @@ As far as possible, individual checks are separated and the user is free to choo
 
 Three broad checks are available:
 - Shelfmark source folder checks
-This checks that the value of `Source Folder` given for an item in SharePoint is a valid path on the BL network. If not, a variable is written to SharePoint. **Sharepoint writing not yet available**
-
+This checks that the value of `Source Folder` given for an item in SharePoint is a valid path on the BL network and writes the outcome of this check to Sharepoint.
 - Run shelfmark protected character check
-Checks a shelfmark as entered in SharePoint for protected characters that will cause errors further down the workflow. Writes to SharePoint if errors are found. **Sharepoint writing not yet available**
+Checks a shelfmark as entered in SharePoint for protected characters that will cause errors further down the workflow. Writes outcome of this check to SharePoint.
 
-- Generates image order CSV and perform ALTO XML checks. Writes to SharePoint if errors are found. 
-**Sharepoint writing not yet available**
-
-### For testing the week of 18th June 2020
-The image order CSV is the most complete check and offers the most useful output so it would be great if you could test this! Image order CSVs should appear in your Desktop within the HMDSharepoint_ImgOrderCSVs folder regardless of which environment you select. Feel free to test things with the `test` or `prod` environments, and use any project you like. The `prod` environment was only included because I started having issues accessing the test SharePoint on 17/06/2020.
-
+- Generates image order CSV and perform ALTO XML checks. Writes to SharePoint if errors are found. Image order csvs are written to a folder on the desktop currently.
 
 
 ## For Developers
@@ -47,10 +40,11 @@ The tool is controlled with the [Program.cs](./Program.cs) file, with different 
 - DirectorySearchTools.cs
     - Contains functions to list the file contents of folder paths passed as an argument, including option to search recursively
 - InputOrderSpreadsheetTools.cs
-    - Contains functions to generate input order CSV file for each shelfmark provided
+    - Contains functions to generate input order CSV file for each shelfmark provided and perform XML checks.
 - TextFileOutput.cs
     - Functions to output text files after running some analysis on items in sharepoint, mainly used for development purposes so far
-
+- HMDSharepointTests
+    - Project containing various test functions for the software tool.
 
 
 
