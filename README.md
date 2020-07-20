@@ -9,8 +9,13 @@ To run, double-click the executable. You will be presented with a series of yes/
 
 ### Environment
 
-Two environments exist within the software tool - `test` and `prod`. Using `test` sets up a test-based environment, only looks at the test sharepoint site and writes output files to your desktop. Using `prod` sets up the live production environment and uses the live HMD sharepoint.  
-**Currently writing-to-sharepoint functionality is not working, so both environments write to the user's desktop** 
+Two environments exist within the software tool - `test` and `prod`. Using `test` sets up a test-based environment, only looks at the test sharepoint site and writes output files to your desktop. Using `prod` sets up the live production environment and uses the live HMD sharepoint. 
+
+**WARNING - UNTESTED FEATURE IN `prod` environment**  
+Image order csv generation in `prod` is untested:
+- Currently I haven't been able to get the ImageOrder.csv files to write directly to the network location due to insufficient permissions. You may have sufficient permissions and be able to write to this location, however!**
+- Not recommended to test this yet, but if you feel like it then testing on single shelfmarks is the most sensible way forward here.  
+The above does not apply to the `test` environment.
 
 The tool then asks if you would like to search sharepoint using a shelfmark. Answer 'yes' here, followed by your shelfmark of choice (matching Sharepoint exactly!) to use this feature.
 
