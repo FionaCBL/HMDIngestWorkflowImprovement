@@ -678,20 +678,19 @@ namespace HMDSharepointChecker
                     clientContext.Load(item); // loading all the fields
                     clientContext.ExecuteQuery();
 
-                    if (item.FieldValues["Title"].ToString() == shelfmark) // double check you're writing to the thing you think you're writing to!
+                   
+                    if (item.FieldValues.ContainsKey(writeCol))
                     {
-                        if (item.FieldValues.ContainsKey(writeCol))
-                        {
                         var currentColumnValue = item[writeCol];
                         item[writeCol] = Message;
                         item.Update();
                         clientContext.ExecuteQuery(); // commits any changes to the sharepoint site
-                        }
-                        else
-                        {
-                            Console.WriteLine("The sharepoint column you're trying to write to does not exist!");
-                        }
                     }
+                    else
+                    {
+                        Console.WriteLine("The sharepoint column you're trying to write to does not exist!");
+                    }
+                    
 
                 }
 

@@ -128,7 +128,7 @@ namespace HMDSharepointChecker
                                                           // do you need this?
 
                         // to-do: turn the below stuff into a class of its own
-                        shelfmarkLabels = mapFileNameToLabels(shelfmark,Files, tifFolder);
+                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder);
                         // shelfmarkLabels is a list of FileLabels objects
                         // each FileLabels object corresponds to a single file and contains:
                         // filename
@@ -149,11 +149,19 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
-                                folderShelfmark = folderShelfmark.TrimEnd('_');
+                                // Remove this because it'll actually mess up shelfmarks
+                                //folderShelfmark = folderShelfmark.TrimEnd('_');
 
 
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                // If we've got a folder with shelfmark/tiffs then the above line will mess things up
+                                // Fix them again with this line
+                                if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
+                                {
+                                    testTifFolder = "\\" + folderShelfmark;
+                                    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
 
+                                }
                                 outFolder += testTifFolder;
                                 if (!Directory.Exists(outFolder))
                                 {
@@ -187,13 +195,15 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
-                                folderShelfmark = folderShelfmark.TrimEnd('_'); // just testing this, might remove in future.
+                                //folderShelfmark = folderShelfmark.TrimEnd('_'); // just testing this, might remove in future.
 
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
-                               // if (testTifFolder.ToUpper().ToLower().Contains(@"\\tif"))
-                                //{
-                                //    testTifFolder = tifFolder.Split('\\')[1];
-                               // }
+                                if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
+                                {
+                                    testTifFolder = "\\"+folderShelfmark;
+                                    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                    
+                                }
 
                                 outFolder += testTifFolder; 
                                 if (!Directory.Exists(outFolder))
@@ -335,7 +345,7 @@ namespace HMDSharepointChecker
             // For all shelfmarks this is then List<List<FileLabels>>
         }
 
-        private static List<FileLabels> mapFileNameToLabels(String inputShelfmark, FileInfo[] Files, String tifFolders)
+        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
@@ -758,12 +768,33 @@ namespace HMDSharepointChecker
 
                 if (containsDIPSNames && numFOLExists) // if numerically labelled folios exist alongside any DIPS compliant names...
                 {
-                    //TODO:
-                    // Need this to trigger some writing to sharepoint - Not yet working.
-                    // This does actually work now, put it in.
-
+                    
                     Console.WriteLine("Mixture of DIPS-compliant and non-compliant filenames in shelfmark {0}", folderDerivedShelfmark);
-                    // Just write this to console for now! Also would write to sharepoint for this shelfmark
+                    String columnName = "DIPS_Compliance";
+                    String message = "Mixture";
+                    try
+                    {
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                    }
+                }
+                else // Things are good!
+                {
+                    String columnName = "DIPS_Compliance";
+                    String message = "Full";
+                    try
+                    {
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                    }
 
                 }
 
@@ -843,7 +874,6 @@ namespace HMDSharepointChecker
 
             try // to write the csv...
             {
-                const char sep = '\t';
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
                 string fNameString = "ImageOrder";
@@ -851,10 +881,18 @@ namespace HMDSharepointChecker
 
                 if (File.Exists(outPath))
                 {
-                    var time = DateTime.Now;
-                    string formattedTime = time.ToString("yyyyMMdd_HH-mm-ss");
-                    string altOutPath = outFolder + @"\" + fNameString + "_" + formattedTime + ".csv";
-                    outPath = altOutPath;
+                    String lastModified = File.GetLastWriteTime(outPath).ToString("yyyyMMdd_HH-mm-ss");
+                    string oldFilePath = outFolder + @"\" + fNameString + "_" + lastModified + ".csv";
+
+                    try
+                    {
+                        File.Move(outPath, oldFilePath); // moves existing imageorder.csv file to include the last modified time
+                                                         // leaves newest created file as 'imageorder.csv'
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Could not move existing ImageOrder.csv from {0} to {1}.\nException: {2}", outPath, oldFilePath, ex);
+                    }
 
                 }
                     
