@@ -166,9 +166,6 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
-                                // Remove this because it'll actually mess up shelfmarks
-                                //folderShelfmark = folderShelfmark.TrimEnd('_');
-
 
                                 string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
                                 // If we've got a folder with shelfmark/tiffs then the above line will mess things up
@@ -205,42 +202,16 @@ namespace HMDSharepointChecker
                         {
                             // ******  This should write straight to network drives in future ****
                             // Only write to Desktop folder for testing. In future, this functionality will only exist for the test environment.
-                            string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                            outFolder += @"\HMDSharepoint_ImgOrderCSVs";
-                            string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
 
-                            string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
-                                //folderShelfmark = folderShelfmark.TrimEnd('_'); // just testing this, might remove in future.
-
-                                string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
-                                if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
-                                {
-                                    testTifFolder = "\\"+folderShelfmark;
-                                    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
-                                    
-                                }
-
-                                outFolder += testTifFolder; 
-                                if (!Directory.Exists(outFolder))
-                                {
-                                    Directory.CreateDirectory(outFolder);
-                                }                        // Now write this to a CSV
-
-                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                
+                                    Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, tifFolder));
+                        
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine("Couldn't set the proper output ImageOrder.csv folder path. Exception: {0}", ex);
-                                outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                                outFolder += @"\HMDSharepoint_ImgOrderCSVs" + @"\"+SM_folderFormat;
-                                if (!Directory.Exists(outFolder))
-                                {
-                                    Directory.CreateDirectory(outFolder);
-                                }                        // Now write this to a CSV
-
-                                Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                Console.WriteLine("Error writing ImageOrder.csv for shelfmark {0} in folder {1}.\nException {2}",shelfmark,tifFolder,ex);
 
                             }
 
