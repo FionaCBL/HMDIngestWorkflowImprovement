@@ -16,9 +16,11 @@ namespace HMDSharepointChecker
             public string SubSubSeries { get; set; }
             public string LogicalLabel { get; set; }
             public string LogicalType { get; set; }
+            public string ChildRecords { get; set; }
 
 
-            public IamsItem(string sharepointID, string itemShelfmark, string iamsTitle, string iamsArk, string subSubSeries, string logicalLabel, string logicalType)
+
+            public IamsItem(string sharepointID, string itemShelfmark, string iamsTitle, string iamsArk, string subSubSeries, string logicalLabel, string logicalType, string childRecords)
             {
                 SharepointID = sharepointID;
                 ItemShelfmark = itemShelfmark;
@@ -27,6 +29,7 @@ namespace HMDSharepointChecker
                 SubSubSeries = subSubSeries;
                 LogicalLabel = logicalLabel;
                 LogicalType = logicalType;
+                ChildRecords = childRecords;
 
             }
             public IamsItem()
@@ -38,6 +41,7 @@ namespace HMDSharepointChecker
                 SubSubSeries = null;
                 LogicalLabel = null;
                 LogicalType = null;
+                ChildRecords = null;
             }
         }
 
@@ -86,6 +90,7 @@ namespace HMDSharepointChecker
                 var xmlNodeSubSubSeries = xmlDocumentIams.SelectSingleNode("//Ancestors//Ancestor[@level='1']//Reference");
                 var xmlLogicalLabel = xmlDocumentIams.SelectSingleNode("//LogicalLabel");
                 var xmlLogicalType = xmlDocumentIams.SelectSingleNode("//LogicalType");
+                var xmlChildRecords = xmlDocumentIams.SelectSingleNode("//Children");
 
                 var logicalLabel = string.Empty;
                 var logicalType = string.Empty;
@@ -105,6 +110,9 @@ namespace HMDSharepointChecker
                 if (xmlLogicalType != null)
                     logicalType = xmlLogicalType.InnerText;
 
+                var iamsChildRecords = string.Empty;
+                if (xmlChildRecords != null) iamsChildRecords = xmlChildRecords.InnerText; 
+
                 var iamsItem = new IamsItem
                 {
                     SharepointID = itemID,
@@ -113,7 +121,8 @@ namespace HMDSharepointChecker
                     ArkIdentifier = iamsArk,
                     SubSubSeries = subSubSeries,
                     LogicalLabel = logicalLabel,
-                    LogicalType = logicalType
+                    LogicalType = logicalType,
+                    ChildRecords = iamsChildRecords
                 };
 
             
