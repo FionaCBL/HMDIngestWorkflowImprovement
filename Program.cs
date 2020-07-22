@@ -145,32 +145,37 @@ namespace HMDSharepointChecker
             bool reportShelfmarkCheckStatus = false;
             bool runShelfmarkCharacterChecks = false;
             bool runImageOrderGenerationXMLChecks = false;
-
+            bool queryMetadata = false;
 
 
             Console.WriteLine("Run shelfmark source folder checks? yes/no");
-            String inputOne = Console.ReadLine();
-            if (inputOne.ToLower() == "yes")
+            String inputSourceFolderCheck = Console.ReadLine();
+            if (inputSourceFolderCheck.ToLower() == "yes")
             {
                 reportShelfmarkCheckStatus = true;
             }
             Console.WriteLine("Run shelfmark protected character check? yes/no");
-            String inputTwo = Console.ReadLine();
-            if (inputTwo.ToLower() == "yes")
+            String inputSMCharCheck = Console.ReadLine();
+            if (inputSMCharCheck.ToLower() == "yes")
             {
                 runShelfmarkCharacterChecks = true;
             }
             Console.WriteLine("Generate image order CSV and perform ALTO XML checks? yes/no");
-            String inputThree = Console.ReadLine();
-            if (inputThree.ToLower() == "yes")
+            String inputImageOrderGen = Console.ReadLine();
+            if (inputImageOrderGen.ToLower() == "yes")
             {
                 runImageOrderGenerationXMLChecks = true;
             }
-
+            Console.WriteLine("Run query against descriptive metadata APIs? yes/no");
+            String inputMDAPIQuery = Console.ReadLine();
+            if (inputMDAPIQuery.ToLower() == "yes")
+            {
+                queryMetadata = true;
+            }
             // =======================================================
 
-           
-           
+
+
 
             // Get the 'Digitisation Workflow' list fields and print them out:
             if (debug)
@@ -273,6 +278,11 @@ namespace HMDSharepointChecker
                 var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow");
                 Assert.IsNotNull(allShelfmarkFiles);
 
+            }
+
+            if (queryMetadata)
+            {
+                LibraryAPIs.queryMetadataAPIs(SourceFolderStatus);
             }
             // ======================================================================
 

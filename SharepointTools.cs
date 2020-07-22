@@ -14,11 +14,21 @@ namespace HMDSharepointChecker
         public string Title { get; set; } 
         public string Location { get; set; }
 
-        public HMDSPObject(string id, string title, string loc)
+        public string MetadataSource { get; set; }
+
+        public HMDSPObject(string id, string title, string loc, string mdsource)
         {
             ID = id;
             Title = title;
             Location = loc;
+            MetadataSource = mdsource;
+        }
+        public HMDSPObject()
+        {
+            ID = null;
+            Title = null;
+            Location = null;
+            MetadataSource = null;
         }
     }
 
@@ -32,11 +42,12 @@ namespace HMDSharepointChecker
         public bool SourceFolderValid { get; set; }
         public string FullSourceFolderPath { get; set; }
         public bool SourceFolderPathValidElsewhere { get; set; }
-
         public bool BadShelfmark { get; set; }
+        public string MetadataSource { get; set; }
 
 
-        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid, bool badSM)
+
+        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid, bool badSM, string metadataSource)
         {
             ID = id;
             Shelfmark = shelfmark;
@@ -47,6 +58,7 @@ namespace HMDSharepointChecker
             FullSourceFolderPath = fsfpath;
             SourceFolderPathValidElsewhere = altvalid;
             BadShelfmark = badSM;
+            MetadataSource = metadataSource;
 
         }
         public HMDObject()
@@ -60,6 +72,7 @@ namespace HMDSharepointChecker
             FullSourceFolderPath = null;
             SourceFolderPathValidElsewhere = false;
             BadShelfmark = false;
+            MetadataSource = null;
         }
 
     }
@@ -188,7 +201,7 @@ namespace HMDSharepointChecker
 
         public static List<HMDSPObject> GetSharePointListFieldContents(string sURL, string lName, string env, string inputvar)
         {
-            Console.Clear();
+            //Console.Clear();
             Console.WriteLine("=======================================\nRetrieving sharepoint list items\n=======================================");
             try
             {
@@ -224,12 +237,13 @@ namespace HMDSharepointChecker
                         itemCounter += 1;
 
                         List<string> listItem = new List<string>();
-                        HMDSPObject thisItem = new HMDSPObject("", "", ""); // create empty hmdobject
+                        HMDSPObject thisItem = new HMDSPObject(); // create empty hmdobject
 
 
                         var itemID = oListItem.FieldValues["ID"].ToString();
                         var itemTitle = oListItem.FieldValues["Title"].ToString();
                         var itemLocation = "";
+                        var itemMetadataSource = oListItem.FieldValues["IAMS_x002f_Aleph"].ToString();
                         try
                         {
                             itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
@@ -241,6 +255,7 @@ namespace HMDSharepointChecker
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = null; // Still want to write out null values of item location so we can report in sharepoint later!
+                            thisItem.MetadataSource = itemMetadataSource; 
                             itemsFound.Add(thisItem);
 
                             continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
@@ -254,6 +269,8 @@ namespace HMDSharepointChecker
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = itemLocation;
+                            thisItem.MetadataSource = itemMetadataSource;
+
 
                         }
 
@@ -305,8 +322,7 @@ namespace HMDSharepointChecker
                 thisItem += 1;
                 HMDObject HMDItem = new HMDObject(); // initialise new HMD object with null vals
                     
-                bool sourceFolderValid = false
-                    ;
+                bool sourceFolderValid = false;
                 bool sourceFolderValidElsewhere = false;
 
                 string fullSourceFolderPath = "";
@@ -314,6 +330,7 @@ namespace HMDSharepointChecker
                 string ID = item.ID;
                 string Shelfmark = item.Title;
                 string sourceFolderSP = item.Location;
+                string metadataSource = item.MetadataSource;
 
                 if (!String.IsNullOrEmpty(sourceFolderSP))
                 {
@@ -384,6 +401,7 @@ namespace HMDSharepointChecker
                         HMDItem.SourceFolderValid = sourceFolderValid;
                         HMDItem.FullSourceFolderPath = fullSourceFolderPath;
                         HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
+                        HMDItem.MetadataSource = metadataSource;
 
 
                     }
@@ -400,6 +418,7 @@ namespace HMDSharepointChecker
                         HMDItem.SourceFolderValid = sourceFolderValid;
                         HMDItem.FullSourceFolderPath = fullSourceFolderPath;
                         HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
+                        HMDItem.MetadataSource = metadataSource;
                         folderExistenceStatus.Add(HMDItem);
                         continue;
 
@@ -418,6 +437,8 @@ namespace HMDSharepointChecker
                     HMDItem.SourceFolderValid = false;
                     HMDItem.FullSourceFolderPath = null;
                     HMDItem.SourceFolderPathValidElsewhere = false;
+                    HMDItem.MetadataSource = metadataSource;
+
                 }
                 folderExistenceStatus.Add(HMDItem);
 
