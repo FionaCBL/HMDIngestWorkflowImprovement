@@ -322,8 +322,7 @@ namespace HMDSharepointChecker
                 thisItem += 1;
                 HMDObject HMDItem = new HMDObject(); // initialise new HMD object with null vals
                     
-                bool sourceFolderValid = false
-                    ;
+                bool sourceFolderValid = false;
                 bool sourceFolderValidElsewhere = false;
 
                 string fullSourceFolderPath = "";
