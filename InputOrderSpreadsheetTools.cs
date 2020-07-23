@@ -166,17 +166,29 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
+                                string testTifFolder = string.Empty;
+                                if (Regex.Matches(tifFolder, folderShelfmark).Count > 1)
 
-                                string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                {
+                                    testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                }
+
                                 // If we've got a folder with shelfmark/tiffs then the above line will mess things up
                                 // Fix them again with this line
-                                if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
-                                {
-                                    testTifFolder = "\\" + folderShelfmark;
-                                    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                //if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
+                                //{
+                                //    testTifFolder = "\\" + folderShelfmark;
+                                //    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
 
-                                }
+                                //}
+                                
+                                var tifFolderItems = tifFolder.Split('\\');
+                                testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
+
                                 outFolder += testTifFolder;
+                                var last = tifFolderItems[tifFolderItems.Length - 1];
+                                var secondLast = tifFolderItems[tifFolderItems.Length - 1];
+
                                 if (!Directory.Exists(outFolder))
                                 {
                                     Directory.CreateDirectory(outFolder);
@@ -452,7 +464,7 @@ namespace HMDSharepointChecker
                             {
                                 frontMatterLabels.FlagStatus = "";
                                 frontMatterLabels.ObjectType = "Cover";
-                                frontMatterLabels.Label = "Front cover inside";
+                                frontMatterLabels.Label = "Inside front cover";
                             }
                             else if (fsr)
                             {
@@ -465,7 +477,7 @@ namespace HMDSharepointChecker
                             {
                                 frontMatterLabels.FlagStatus = "";
                                 frontMatterLabels.ObjectType = "Flysheet";
-                                string flysheetLabelString = "front flysheet " + noZerosName;
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
                                 frontMatterLabels.Label = flysheetLabelString;
                             }
                             else
@@ -701,7 +713,7 @@ namespace HMDSharepointChecker
                             {
                                 emLabels.FlagStatus = "";
                                 emLabels.ObjectType = "Cover";
-                                emLabels.Label = "Back cover inside";
+                                emLabels.Label = "Inside back cover";
                             }
                             else if (fbrigv)
                             {
@@ -837,7 +849,7 @@ namespace HMDSharepointChecker
            // filename , flagStatus, objectType, Label 
            //- flagStatus is a string that is either empty (all good!) or contains an error message
            // objectType is jut page, cover, flysheet etc
-           // label is "back cover inside", "folio 5v" etc
+           // label is "Inside back cover", "folio 5v" etc
            for(int i = 0; i<allFilesSorted.Count; i++)
             {
                 string orderNumber = (i + 1).ToString();

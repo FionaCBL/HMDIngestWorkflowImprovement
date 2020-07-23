@@ -189,7 +189,11 @@ namespace HMDSharepointChecker
 
             // Get the contents of the "ID", "Shelfmark" and "Source Folder" columns in the 'Digitisation Workflow' list
             var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListFieldContents(spURL, "Digitisation Workflow",env,inputVariable);
-            Assert.IsNotNull(DigitisationWorkflow_ID_Title_SourceFolders.Count);
+            if(DigitisationWorkflow_ID_Title_SourceFolders.Count < 1)
+            {
+                Console.ReadKey();
+                return;
+            }
 
             //  Check source folders - requires the above two lines to work
             var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
@@ -296,7 +300,7 @@ namespace HMDSharepointChecker
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
 
-            
+
             return;            
         }
 

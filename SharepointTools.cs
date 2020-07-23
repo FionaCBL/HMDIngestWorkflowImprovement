@@ -221,8 +221,12 @@ namespace HMDSharepointChecker
                     clientContext.Load(oItems);
                     clientContext.ExecuteQuery();
 
-
                     List<HMDSPObject> itemsFound = new List<HMDSPObject>();
+                    if (oItems.Count < 1)
+                    {
+                        Console.WriteLine("Invalid sharepoint query - not found. Ensure the shelfmark/project you entered matches the one in sharepoint exactly!\nPress any key to exit.");
+                        return itemsFound;
+                    }
 
                     var itemCounter = 1;
                     foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
