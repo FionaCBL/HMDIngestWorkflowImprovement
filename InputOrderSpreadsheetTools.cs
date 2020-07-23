@@ -102,13 +102,26 @@ namespace HMDSharepointChecker
                         {
 
                             var subFolders = Directory.GetDirectories(sourceFolder);
-                            foreach (var subFolder in subFolders)
+                            if (subFolders.Length > 0)
                             {
-                                //Console.WriteLine("Testing subFolder: {0}", subFolder);
-                                if (subFolder.ToUpper().ToLower().Contains("tif"))
+
+                                foreach (var subFolder in subFolders)
                                 {
-                                    tifFolder = subFolder;
-                                 //   Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                    //Console.WriteLine("Testing subFolder: {0}", subFolder);
+                                    if (subFolder.ToUpper().ToLower().Contains("tif"))
+                                    {
+                                        tifFolder = subFolder;
+                                        //   Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                    }
+                                }
+                            }
+                            else
+                            { // this case rarely gets called, but needs to be accounted for
+                                DirectoryInfo d = new DirectoryInfo(sourceFolder);
+                                FileInfo[] Files = d.GetFiles("*.TIF*");
+                                if(Files.Length > 0)
+                                {
+                                    tifFolder = sourceFolder;
                                 }
                             }
                         }
