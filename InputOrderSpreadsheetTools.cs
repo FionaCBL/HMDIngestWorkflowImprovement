@@ -17,15 +17,17 @@ namespace HMDSharepointChecker
         public string ObjectType { get; set; }
         public string Label { get; set; }
         public string OrderNumber { get; set; }
+        public int SubOrder { get; set; }
 
 
-        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum)
+        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum, int subOrder)
         {
             FileName = filename;
             FlagStatus = flagstatus;
             ObjectType = objtype;
             Label = label;
             OrderNumber = ordernum;
+            SubOrder = subOrder;
 
         }
         public FileLabels()
@@ -35,6 +37,7 @@ namespace HMDSharepointChecker
             ObjectType = null;
             Label = null;
             OrderNumber = null;
+            SubOrder = -999;
         }
 
     }
@@ -324,14 +327,16 @@ namespace HMDSharepointChecker
 
                         // Write to a column "TIF_Folder_Found" or similar!
 
-                        FileLabels errorList = new FileLabels(shelfmark, null, null, null, null );
+                        FileLabels errorList = new FileLabels();
+                        errorList.FileName = shelfmark;
                         errorList.FlagStatus = "TIF folder not found";
                         continue; // use continue for now, but will need to write out invalid path to a variable at some point
                     }
                 } // is source folder valid? 
                 else // source folder was never valid
                 {
-                    FileLabels errorList = new FileLabels(shelfmark, null, null, null, null);
+                    FileLabels errorList = new FileLabels();
+                    errorList.FileName = shelfmark;
                     errorList.FlagStatus = "Invalid source folder";
                     // Got yourself a shelfmark that needs checking, so obviously things will fail here...
                     continue;
@@ -371,8 +376,11 @@ namespace HMDSharepointChecker
 
             // Define regular expressions to search for
             // 'initial' versions perform a looser search
-            string iFrontMatterReString = @"(.)+(((fble)((f)|(fv)|(fr)))|((fs)[0-9]+(.)+))\.tif";
+            string iFrontMatterReString = @"(.)+((fble)((f)|(fv)|(fr)))\.tif";
             var initialFrontMatterRegex = new Regex(iFrontMatterReString, RegexOptions.IgnoreCase);
+
+            string iFrontFlysheetsReString = @"(.)+(fs[0-9]+(.)+)\.tif";
+            var initialFrontFlysheetRegex = new Regex(iFrontFlysheetsReString, RegexOptions.IgnoreCase);
 
             string iFolioReString = @"(.)+(f)([0-9])+(.)+\.tif";
             var initialFolioRegex = new Regex(iFolioReString, RegexOptions.IgnoreCase);
@@ -394,12 +402,13 @@ namespace HMDSharepointChecker
 
             // Candidates for each section:
             List<string> cFrontMatter = fileNames.Where(f => initialFrontMatterRegex.IsMatch(f)).ToList();
+            List<string> cFrontFlysheets = fileNames.Where(f => initialFrontFlysheetRegex.IsMatch(f)).ToList();
             List<string> cEndFlysheets = fileNames.Where(f => initialEndFlysheetsRegex.IsMatch(f)).ToList();
             List<string> cEndMatter = fileNames.Where(f => initialEndMatterRegex.IsMatch(f)).ToList();
             List<string> cFolios = fileNames.Where(f => initialFolioRegex.IsMatch(f)).ToList();
             List<string> cNumericFolios = fileNames.Where(f => initialNumericFolioRegex.IsMatch(f)).ToList();
 
-            List<string> foundItems = cFrontMatter.Concat(cFolios).Concat(cNumericFolios).Concat(cEndFlysheets).Concat(cEndMatter).ToList();
+            List<string> foundItems = cFrontMatter.Concat(cFrontFlysheets).Concat(cFolios).Concat(cNumericFolios).Concat(cEndFlysheets).Concat(cEndMatter).ToList();
 
 
             List<String> otherFiles = (from e in (fileNames.Concat(foundItems))
@@ -410,6 +419,7 @@ namespace HMDSharepointChecker
             List<FileLabels> allFilesSorted = new List<FileLabels>(); // this is what you're returning later
 
             List<FileLabels> frontMatter = new List<FileLabels>();
+            List<FileLabels> frontFlysheets = new List<FileLabels>();
             List<FileLabels> endFlysheets = new List<FileLabels>();
             List<FileLabels> endMatter = new List<FileLabels>();
             List<FileLabels> folios = new List<FileLabels>();
@@ -421,11 +431,12 @@ namespace HMDSharepointChecker
 
             string folderDerivedShelfmark = "";
         
-            if (cFrontMatter.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
+            if (cFrontMatter.Any() | cFrontFlysheets.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
             {
                 // you can be pretty sure its DIPs compliant if you see any titles or any numbered folios
                
                 bool FMExists = false;
+                bool FFSExists = false;
                 bool FOLExists = false;
                 bool EFSExists = false;
                 bool EMExists = false;
@@ -455,7 +466,7 @@ namespace HMDSharepointChecker
 
 
 
-                        string matchString = derivedShelfmark+@"_(((fble)((f)|(fv)|(fr)))|((fs)[0-9]+[rv]))\.tif";
+                        string matchString = derivedShelfmark+@"_((fble)((f)|(fv)|(fr)))\.tif";
                         var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
@@ -463,8 +474,7 @@ namespace HMDSharepointChecker
                             var fblef = Regex.Match(fname, @"(.)+(fblef)\.tif", RegexOptions.IgnoreCase).Success;
                             var fblefr = Regex.Match(fname, @"(.)+(fblefr)\.tif", RegexOptions.IgnoreCase).Success;
                             var fblefv = Regex.Match(fname, @"(.)+(fblefv)\.tif", RegexOptions.IgnoreCase).Success;
-                            var fsr = Regex.Match(fname, @"(.)+((fs)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
-                            var fsv = Regex.Match(fname, @"(.)+((fs)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
+
                             if (fblef)
                             {
                                 frontMatterLabels.FlagStatus = "Missing recto or verso indicator in filename";
@@ -478,7 +488,7 @@ namespace HMDSharepointChecker
                                 frontMatterLabels.ObjectType = "Cover";
                                 frontMatterLabels.Label = "Front cover";
 
-                             
+
                             }
                             else if (fblefv)
                             {
@@ -486,20 +496,7 @@ namespace HMDSharepointChecker
                                 frontMatterLabels.ObjectType = "Cover";
                                 frontMatterLabels.Label = "Inside front cover";
                             }
-                            else if (fsr)
-                            {
-                                frontMatterLabels.FlagStatus = "";
-                                frontMatterLabels.ObjectType = "Flysheet"; 
-                                string flysheetLabelString = "Front flysheet " + noZerosName;
-                                frontMatterLabels.Label = flysheetLabelString;
-                            }
-                            else if (fsv)
-                            {
-                                frontMatterLabels.FlagStatus = "";
-                                frontMatterLabels.ObjectType = "Flysheet";
-                                string flysheetLabelString = "Front flysheet " + noZerosName;
-                                frontMatterLabels.Label = flysheetLabelString;
-                            }
+
                             else
                             {
                                 Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
@@ -522,6 +519,92 @@ namespace HMDSharepointChecker
                         }
                         frontMatter.Add(frontMatterLabels);
                     }
+                }
+                if (cFrontFlysheets.Any())
+                {
+
+                    FFSExists = true;
+
+                        foreach (string fname in cFrontFlysheets)
+                    {
+                        FileLabels frontFlysheetLabels = new FileLabels();
+
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        folderDerivedShelfmark = derivedShelfmark;
+                        // replace the string
+                        string derivedFilename = split2.Last();
+                        string trimmedName = derivedFilename.Trim('f', 's');
+                        string noZerosName = trimmedName.TrimStart('0');
+                        
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                            //orderNumber.Add(Int32.Parse(noZerosName));
+
+                        string matchString = derivedShelfmark + @"_(fs[0-9]+[rv])\.tif";
+                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        { 
+                           
+
+                            frontFlysheetLabels.FileName = fname;
+
+                            var fsr = Regex.Match(fname, @"(.)+((fs)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsv = Regex.Match(fname, @"(.)+((fs)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
+                            
+                            if (fsr)
+                            {
+                                frontFlysheetLabels.FlagStatus = "";
+                                frontFlysheetLabels.ObjectType = "Flysheet";
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
+                                frontFlysheetLabels.Label = flysheetLabelString;
+                                int subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+
+                                frontFlysheetLabels.SubOrder = subOrderNumber + (subOrderNumber -2); 
+                                // based on the formula order number = n + (n-2) for recto
+                                // and o = n + (n-1) for verso
+                                // ensures images 1r are number zero
+                                // and image 1v is number 1, etc.
+
+                            }
+                            else if (fsv)
+                            {
+                                frontFlysheetLabels.FlagStatus = "";
+                                frontFlysheetLabels.ObjectType = "Flysheet";
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
+                                frontFlysheetLabels.Label = flysheetLabelString;
+                                int subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                frontFlysheetLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+
+                            }
+                            else
+                            {
+                                Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                frontFlysheetLabels.FlagStatus = errString;
+                                frontFlysheetLabels.ObjectType = "Page";
+                                frontFlysheetLabels.Label = derivedFilename;
+
+                            }
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            frontFlysheetLabels.FileName = fname;
+                            frontFlysheetLabels.FlagStatus = errString;
+                            frontFlysheetLabels.ObjectType = "Page";
+                            frontFlysheetLabels.Label = derivedFilename;
+
+
+                        }
+                        frontFlysheets.Add(frontFlysheetLabels);
+
+                        }
+
                 }
                 if (cFolios.Any())
                 {
@@ -562,6 +645,9 @@ namespace HMDSharepointChecker
                                 folioLabels.ObjectType = "Page";
                                 string frString = "Folio " + noZerosName;
                                 folioLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+
 
                             }
                             else if (fv)
@@ -570,6 +656,10 @@ namespace HMDSharepointChecker
                                 folioLabels.ObjectType="Page";
                                 string frString = "Folio " + noZerosName;
                                 folioLabels.Label=frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+
+
                             }
                             else
                             {
@@ -618,6 +708,7 @@ namespace HMDSharepointChecker
                         if (derivedShelfmark.Contains(inputShelfmark) || inputShelfmark.Contains(derivedShelfmark))
                         {
                             int fileNameNumber = Int32.Parse(noZerosName);
+                            numFLabels.SubOrder = fileNameNumber;
                             if (fileNameNumber - orderCheckNum != 1)
                             {
                                 orderCheck = false;
@@ -701,6 +792,9 @@ namespace HMDSharepointChecker
                                 efsLabels.ObjectType = "Flysheet";
                                 string frString = "Back flysheet " + noZerosName;
                                 efsLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                efsLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+
                             }
                             else if (fsev)
                             {
@@ -708,6 +802,8 @@ namespace HMDSharepointChecker
                                 efsLabels.ObjectType = "Flysheet";
                                 string frString = "Back flysheet " + noZerosName;
                                 efsLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                efsLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
                             }
                             else
                             {
@@ -859,10 +955,11 @@ namespace HMDSharepointChecker
 
                 // Sort everything by filename at this point
                 frontMatter = frontMatter.OrderBy(o => o.FileName).ToList();
-                folios = folios.OrderBy(o => o.FileName).ToList();
-                endFlysheets = endFlysheets.OrderBy(o => o.FileName).ToList();
+                frontFlysheets = frontFlysheets.OrderBy(o => o.SubOrder).ToList(); // flysheets need to be ordered numerically
+                folios = folios.OrderBy(o => o.SubOrder).ToList();
+                endFlysheets = endFlysheets.OrderBy(o => o.SubOrder).ToList();
                 endMatter = endMatter.OrderBy(o => o.FileName).ToList();
-                numericFiles = numericFiles.OrderBy(o => o.FileName).ToList();
+                numericFiles = numericFiles.OrderBy(o => o.SubOrder).ToList(); // was filename but can sort numeric files by SubOrder now!
                 unclassified = unclassified.OrderBy(o => o.FileName).ToList();
 
                 // Flagging DIPS compliance mismatches:
@@ -930,6 +1027,10 @@ namespace HMDSharepointChecker
                 foreach (FileLabels fm in frontMatter)
                 {
                     allFilesSorted.Add(fm);
+                }
+                foreach (FileLabels ffs in frontFlysheets)
+                {
+                    allFilesSorted.Add(ffs);
                 }
                 foreach (FileLabels fol in folios)
                 {

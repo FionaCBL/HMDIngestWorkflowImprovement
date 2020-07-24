@@ -257,8 +257,8 @@ namespace HMDSharepointChecker
                         var sysNoString = string.Empty;
                         if (itemSystemNumber != null) sysNoString = itemSystemNumber.ToString();
                         else
-                        {
-                            Console.WriteLine("Could not retrieve Aleph System Number for shelfmark {0}", itemTitle);
+                        {// Don't print this out for now...
+                           // Console.WriteLine("Could not retrieve Aleph System Number for shelfmark {0}", itemTitle);
                         }
                        
                         try
