@@ -12,29 +12,32 @@ namespace HMDSharepointChecker
     {
 
 
-        public string Filename { get; set; }
+        public string FileName { get; set; }
         public string FlagStatus { get; set; }
         public string ObjectType { get; set; }
         public string Label { get; set; }
         public string OrderNumber { get; set; }
+        public int SubOrder { get; set; }
 
 
-        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum)
+        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum, int subOrder)
         {
-            Filename = filename;
+            FileName = filename;
             FlagStatus = flagstatus;
             ObjectType = objtype;
             Label = label;
             OrderNumber = ordernum;
+            SubOrder = subOrder;
 
         }
         public FileLabels()
         {
-            Filename = null;
+            FileName = null;
             FlagStatus = null;
             ObjectType = null;
             Label = null;
             OrderNumber = null;
+            SubOrder = -999;
         }
 
     }
@@ -102,13 +105,26 @@ namespace HMDSharepointChecker
                         {
 
                             var subFolders = Directory.GetDirectories(sourceFolder);
-                            foreach (var subFolder in subFolders)
+                            if (subFolders.Length > 0)
                             {
-                                //Console.WriteLine("Testing subFolder: {0}", subFolder);
-                                if (subFolder.ToUpper().ToLower().Contains("tif"))
+
+                                foreach (var subFolder in subFolders)
                                 {
-                                    tifFolder = subFolder;
-                                 //   Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                    //Console.WriteLine("Testing subFolder: {0}", subFolder);
+                                    if (subFolder.ToUpper().ToLower().Contains("tif"))
+                                    {
+                                        tifFolder = subFolder;
+                                        //   Console.WriteLine("Found subfolder for folder {0}", sourceFolder);
+                                    }
+                                }
+                            }
+                            else
+                            { // this case rarely gets called, but needs to be accounted for
+                                DirectoryInfo d = new DirectoryInfo(sourceFolder);
+                                FileInfo[] Files = d.GetFiles("*.TIF*");
+                                if(Files.Length > 0)
+                                {
+                                    tifFolder = sourceFolder;
                                 }
                             }
                         }
@@ -166,17 +182,31 @@ namespace HMDSharepointChecker
                             string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                             try
                             {
+                                string testTifFolder = string.Empty;
+                                var tifFolderItems = tifFolder.Split('\\');
 
-                                string testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                if (Regex.Matches(tifFolder, folderShelfmark).Count > 1)
+
+                                {
+                                    testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                }
+
                                 // If we've got a folder with shelfmark/tiffs then the above line will mess things up
                                 // Fix them again with this line
-                                if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
-                                {
-                                    testTifFolder = "\\" + folderShelfmark;
-                                    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                //if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
+                                //{
+                                //    testTifFolder = "\\" + folderShelfmark;
+                                //    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
 
+                                //}
+                                else
+                                {
+                                    testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
                                 }
                                 outFolder += testTifFolder;
+                                var last = tifFolderItems[tifFolderItems.Length - 1];
+                                var secondLast = tifFolderItems[tifFolderItems.Length - 1];
+
                                 if (!Directory.Exists(outFolder))
                                 {
                                     Directory.CreateDirectory(outFolder);
@@ -297,14 +327,16 @@ namespace HMDSharepointChecker
 
                         // Write to a column "TIF_Folder_Found" or similar!
 
-                        FileLabels errorList = new FileLabels(shelfmark, null, null, null, null );
+                        FileLabels errorList = new FileLabels();
+                        errorList.FileName = shelfmark;
                         errorList.FlagStatus = "TIF folder not found";
                         continue; // use continue for now, but will need to write out invalid path to a variable at some point
                     }
                 } // is source folder valid? 
                 else // source folder was never valid
                 {
-                    FileLabels errorList = new FileLabels(shelfmark, null, null, null, null);
+                    FileLabels errorList = new FileLabels();
+                    errorList.FileName = shelfmark;
                     errorList.FlagStatus = "Invalid source folder";
                     // Got yourself a shelfmark that needs checking, so obviously things will fail here...
                     continue;
@@ -344,8 +376,11 @@ namespace HMDSharepointChecker
 
             // Define regular expressions to search for
             // 'initial' versions perform a looser search
-            string iFrontMatterReString = @"(.)+(((fble)((fv)|(fr)))|((fs)[0-9]+(.)+))\.tif";
+            string iFrontMatterReString = @"(.)+((fble)((f)|(fv)|(fr)))\.tif";
             var initialFrontMatterRegex = new Regex(iFrontMatterReString, RegexOptions.IgnoreCase);
+
+            string iFrontFlysheetsReString = @"(.)+(fs[0-9]+(.)+)\.tif";
+            var initialFrontFlysheetRegex = new Regex(iFrontFlysheetsReString, RegexOptions.IgnoreCase);
 
             string iFolioReString = @"(.)+(f)([0-9])+(.)+\.tif";
             var initialFolioRegex = new Regex(iFolioReString, RegexOptions.IgnoreCase);
@@ -354,7 +389,7 @@ namespace HMDSharepointChecker
             var initialEndFlysheetsRegex = new Regex(iEndFlysheetsReString, RegexOptions.IgnoreCase);
 
 
-            string iEndMatterReString = @"(.)+(((fb)((rigv)|(rigr)|(spi))))\.tif";
+            string iEndMatterReString = @"(.)+(((fb)((rig)|(rigv)|(rigr)|(spi))))\.tif";
             var initialEndMatterRegex = new Regex(iEndMatterReString, RegexOptions.IgnoreCase);
 
             string iNumericFolioReString = @"(.)+_([0-9])+\.tif";
@@ -367,12 +402,13 @@ namespace HMDSharepointChecker
 
             // Candidates for each section:
             List<string> cFrontMatter = fileNames.Where(f => initialFrontMatterRegex.IsMatch(f)).ToList();
+            List<string> cFrontFlysheets = fileNames.Where(f => initialFrontFlysheetRegex.IsMatch(f)).ToList();
             List<string> cEndFlysheets = fileNames.Where(f => initialEndFlysheetsRegex.IsMatch(f)).ToList();
             List<string> cEndMatter = fileNames.Where(f => initialEndMatterRegex.IsMatch(f)).ToList();
             List<string> cFolios = fileNames.Where(f => initialFolioRegex.IsMatch(f)).ToList();
             List<string> cNumericFolios = fileNames.Where(f => initialNumericFolioRegex.IsMatch(f)).ToList();
 
-            List<string> foundItems = cFrontMatter.Concat(cFolios).Concat(cNumericFolios).Concat(cEndFlysheets).Concat(cEndMatter).ToList();
+            List<string> foundItems = cFrontMatter.Concat(cFrontFlysheets).Concat(cFolios).Concat(cNumericFolios).Concat(cEndFlysheets).Concat(cEndMatter).ToList();
 
 
             List<String> otherFiles = (from e in (fileNames.Concat(foundItems))
@@ -383,18 +419,24 @@ namespace HMDSharepointChecker
             List<FileLabels> allFilesSorted = new List<FileLabels>(); // this is what you're returning later
 
             List<FileLabels> frontMatter = new List<FileLabels>();
+            List<FileLabels> frontFlysheets = new List<FileLabels>();
             List<FileLabels> endFlysheets = new List<FileLabels>();
             List<FileLabels> endMatter = new List<FileLabels>();
             List<FileLabels> folios = new List<FileLabels>();
             List<FileLabels> numericFiles = new List<FileLabels>();
+            List<FileLabels> unclassified = new List<FileLabels>();
+
+            bool dipsCompliant = true;
+            bool orderCheck = true;
 
             string folderDerivedShelfmark = "";
         
-            if (cFrontMatter.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
+            if (cFrontMatter.Any() | cFrontFlysheets.Any() | cFolios.Any() | cEndMatter.Any() | cEndFlysheets.Any())
             {
                 // you can be pretty sure its DIPs compliant if you see any titles or any numbered folios
-
+               
                 bool FMExists = false;
+                bool FFSExists = false;
                 bool FOLExists = false;
                 bool EFSExists = false;
                 bool EMExists = false;
@@ -424,50 +466,37 @@ namespace HMDSharepointChecker
 
 
 
-                        string matchString = derivedShelfmark+@"_(((fble)((fv)|(fr)))|((fs)[0-9]+[rv]))\.tif";
+                        string matchString = derivedShelfmark+@"_((fble)((f)|(fv)|(fr)))\.tif";
                         var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
-                            frontMatterLabels.Filename = fname;
+                            frontMatterLabels.FileName = fname;
                             var fblef = Regex.Match(fname, @"(.)+(fblef)\.tif", RegexOptions.IgnoreCase).Success;
                             var fblefr = Regex.Match(fname, @"(.)+(fblefr)\.tif", RegexOptions.IgnoreCase).Success;
                             var fblefv = Regex.Match(fname, @"(.)+(fblefv)\.tif", RegexOptions.IgnoreCase).Success;
-                            var fsr = Regex.Match(fname, @"(.)+((fs)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
-                            var fsv = Regex.Match(fname, @"(.)+((fs)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
+
                             if (fblef)
                             {
                                 frontMatterLabels.FlagStatus = "Missing recto or verso indicator in filename";
                                 frontMatterLabels.ObjectType = "Cover";
                                 frontMatterLabels.Label = "Front cover";
+                                dipsCompliant = false;
                             }
-                            if (fblefr)
+                            else if (fblefr)
                             {
                                 frontMatterLabels.FlagStatus = "";
                                 frontMatterLabels.ObjectType = "Cover";
                                 frontMatterLabels.Label = "Front cover";
 
-                             
+
                             }
                             else if (fblefv)
                             {
                                 frontMatterLabels.FlagStatus = "";
                                 frontMatterLabels.ObjectType = "Cover";
-                                frontMatterLabels.Label = "Front cover inside";
+                                frontMatterLabels.Label = "Inside front cover";
                             }
-                            else if (fsr)
-                            {
-                                frontMatterLabels.FlagStatus = "";
-                                frontMatterLabels.ObjectType = "Flysheet"; 
-                                string flysheetLabelString = "Front flysheet " + noZerosName;
-                                frontMatterLabels.Label = flysheetLabelString;
-                            }
-                            else if (fsv)
-                            {
-                                frontMatterLabels.FlagStatus = "";
-                                frontMatterLabels.ObjectType = "Flysheet";
-                                string flysheetLabelString = "front flysheet " + noZerosName;
-                                frontMatterLabels.Label = flysheetLabelString;
-                            }
+
                             else
                             {
                                 Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
@@ -475,21 +504,114 @@ namespace HMDSharepointChecker
                                 frontMatterLabels.FlagStatus = errString;
                                 frontMatterLabels.ObjectType = "Page";
                                 frontMatterLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
 
                             }
                         }
                         else
                         {
                             string errString = "Unexpected characters in filename. Flag for investigation";
-                            frontMatterLabels.Filename = fname;
+                            frontMatterLabels.FileName = fname;
                             frontMatterLabels.FlagStatus = errString;
                             frontMatterLabels.ObjectType = "Page";
                             frontMatterLabels.Label = derivedFilename;
-                           
+                            dipsCompliant = false;
+
+
 
                         }
                         frontMatter.Add(frontMatterLabels);
                     }
+                }
+                if (cFrontFlysheets.Any())
+                {
+
+                    FFSExists = true;
+
+                        foreach (string fname in cFrontFlysheets)
+                    {
+                        FileLabels frontFlysheetLabels = new FileLabels();
+
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                        folderDerivedShelfmark = derivedShelfmark;
+                        // replace the string
+                        string derivedFilename = split2.Last();
+                        string trimmedName = derivedFilename.Trim('f', 's');
+                        string noZerosName = trimmedName.TrimStart('0');
+                        
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                            //orderNumber.Add(Int32.Parse(noZerosName));
+
+                        string matchString = derivedShelfmark + @"_(fs[0-9]+[rv])\.tif";
+                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        { 
+                           
+
+                            frontFlysheetLabels.FileName = fname;
+
+                            var fsr = Regex.Match(fname, @"(.)+((fs)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
+                            var fsv = Regex.Match(fname, @"(.)+((fs)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
+                            
+                            if (fsr)
+                            {
+                                frontFlysheetLabels.FlagStatus = "";
+                                frontFlysheetLabels.ObjectType = "Flysheet";
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
+                                frontFlysheetLabels.Label = flysheetLabelString;
+                                int subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+
+                                frontFlysheetLabels.SubOrder = subOrderNumber + (subOrderNumber -2); 
+                                // based on the formula order number = n + (n-2) for recto
+                                // and o = n + (n-1) for verso
+                                // ensures images 1r are number zero
+                                // and image 1v is number 1, etc.
+
+                            }
+                            else if (fsv)
+                            {
+                                frontFlysheetLabels.FlagStatus = "";
+                                frontFlysheetLabels.ObjectType = "Flysheet";
+                                string flysheetLabelString = "Front flysheet " + noZerosName;
+                                frontFlysheetLabels.Label = flysheetLabelString;
+                                int subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                frontFlysheetLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+
+                            }
+                            else
+                            {
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                frontFlysheetLabels.FlagStatus = errString;
+                                frontFlysheetLabels.ObjectType = "Page";
+                                frontFlysheetLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
+
+                            }
+                        }
+                        else
+                        {
+                            string errString = "Unexpected characters in filename. Flag for investigation";
+                            frontFlysheetLabels.FileName = fname;
+                            frontFlysheetLabels.FlagStatus = errString;
+                            frontFlysheetLabels.ObjectType = "Page";
+                            frontFlysheetLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
+
+
+                        }
+                        frontFlysheets.Add(frontFlysheetLabels);
+
+                        }
+
                 }
                 if (cFolios.Any())
                 {
@@ -520,7 +642,7 @@ namespace HMDSharepointChecker
                         var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
-                            folioLabels.Filename = fname;
+                            folioLabels.FileName = fname;
                             var fr = Regex.Match(fname, @"(.)+((f)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
                             var fv = Regex.Match(fname, @"(.)+((f)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
 
@@ -528,16 +650,23 @@ namespace HMDSharepointChecker
                             {
                                 folioLabels.FlagStatus = "";
                                 folioLabels.ObjectType = "Page";
-                                string frString = "Folio " + noZerosName;
+                                string frString = "f. " + noZerosName;
                                 folioLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+
 
                             }
                             else if (fv)
                             {
                                 folioLabels.FlagStatus= ""; // little bit redundant, remove after testing this works
                                 folioLabels.ObjectType="Page";
-                                string frString = "Folio " + noZerosName;
+                                string frString = "f. " + noZerosName;
                                 folioLabels.Label=frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+
+
                             }
                             else
                             {
@@ -546,16 +675,20 @@ namespace HMDSharepointChecker
                                 folioLabels.FlagStatus=errString;
                                 folioLabels.ObjectType="Page";
                                 folioLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
 
                         }
                         else
                         {
                             string errString = "Unexpected characters in filename. Flag for investigation";
-                            folioLabels.Filename = fname;
+                            folioLabels.FileName = fname;
                             folioLabels.FlagStatus = errString;
                             folioLabels.ObjectType = "Page";
                             folioLabels.Label=derivedFilename;
+                            dipsCompliant = false;
+
                         }
                         folios.Add(folioLabels);
                     }
@@ -565,6 +698,7 @@ namespace HMDSharepointChecker
                 {
 
                     numFOLExists = true;
+                    int orderCheckNum = 0;
                     foreach (string fname in cNumericFolios)
                     {
                         FileLabels numFLabels = new FileLabels();
@@ -577,26 +711,57 @@ namespace HMDSharepointChecker
                         string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
                         theShelfmark = derivedShelfmark;
                         string derivedFilename = split2.Last();
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                         folderDerivedShelfmark = derivedShelfmark;
-
-
-                        string matchString = theShelfmark+@"_([0-9])+\.tif";
-
-                        var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
-
-                        numFLabels.Filename = fname;
-                        numFLabels.FlagStatus = "";
-                        numFLabels.ObjectType = "Page";
-                        numFLabels.Label = derivedFilename;
-
-                        if (!match.Success)
+                        string noZerosName = derivedFilename.TrimStart('0');
+                        noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                        
+                        if (derivedShelfmark.Contains(inputShelfmark) || inputShelfmark.Contains(derivedShelfmark))
                         {
-                       
-                            Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
-                            string errString = "Unexpected characters in filename. Flag for investigation";
-                            numFLabels.FlagStatus = errString;
- 
+                            int fileNameNumber = Int32.Parse(noZerosName);
+                            numFLabels.SubOrder = fileNameNumber;
+                            if (fileNameNumber - orderCheckNum != 1)
+                            {
+                                orderCheck = false;
+                            }
+                            orderCheckNum = fileNameNumber;
+
+                            string matchString = theShelfmark + @"_([0-9])+\.tif";
+                            var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
+
+                            numFLabels.FileName = fname;
+                            numFLabels.FlagStatus = "";
+                            numFLabels.ObjectType = "Page";
+                            numFLabels.Label = derivedFilename;
+
+                            if (!match.Success)
+                            {
+
+                                Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
+                                string errString = "Unexpected characters in filename. Flag for investigation";
+                                numFLabels.FlagStatus = errString;
+                                dipsCompliant = false;
+
+
+                            }
+                            else if (!orderCheck)
+                            {
+                                string errString = "Non-consecutive numbering in image name";
+                                numFLabels.FlagStatus = errString;
+                            }
+
                         }
+                        else
+                        {
+                            Console.WriteLine("ERROR: Doesn't match shelfmark filenaming pattern");
+                            numFLabels.FileName = fname;
+                            numFLabels.FlagStatus = "File name not formed from shelfmark";
+                            numFLabels.ObjectType = "Unknown";
+                            numFLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
+                        }
+
                         numericFiles.Add(numFLabels);
                     }
                 }
@@ -631,7 +796,7 @@ namespace HMDSharepointChecker
                         var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
-                            efsLabels.Filename = fname;
+                            efsLabels.FileName = fname;
                             var fser = Regex.Match(fname, @"(.)+((fse)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
                             var fsev = Regex.Match(fname, @"(.)+((fse)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
                             if (fser)
@@ -640,6 +805,9 @@ namespace HMDSharepointChecker
                                 efsLabels.ObjectType = "Flysheet";
                                 string frString = "Back flysheet " + noZerosName;
                                 efsLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                efsLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+
                             }
                             else if (fsev)
                             {
@@ -647,6 +815,8 @@ namespace HMDSharepointChecker
                                 efsLabels.ObjectType = "Flysheet";
                                 string frString = "Back flysheet " + noZerosName;
                                 efsLabels.Label = frString;
+                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                efsLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
                             }
                             else
                             {
@@ -654,15 +824,19 @@ namespace HMDSharepointChecker
                                 efsLabels.FlagStatus = errString; // error string
                                 efsLabels.ObjectType = "Flysheet";
                                 efsLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
                         }
                         else
                         {
                             string errString = "Unexpected characters in filename. Flag for investigation";
-                            efsLabels.Filename = fname;
+                            efsLabels.FileName = fname;
                             efsLabels.FlagStatus = errString;
                             efsLabels.ObjectType = "Page";
                             efsLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
 
                         }
                         endFlysheets.Add(efsLabels);
@@ -686,22 +860,29 @@ namespace HMDSharepointChecker
                         derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
                         folderDerivedShelfmark = derivedShelfmark;
 
-                        string matchString = derivedShelfmark + @"_(((fb)((rigv)|(rigr)|(spi))))\.tif";
+                        string matchString = derivedShelfmark + @"_(((fb)((rig)|(rigv)|(rigr)|(spi))))\.tif";
 
                         List<String> ema = new List<String>();
                         var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
-                            emLabels.Filename = fname;
+                            emLabels.FileName = fname;
+                            var fbrig = Regex.Match(fname, @"(.)+(fbrig)\.tif", RegexOptions.IgnoreCase).Success;
                             var fbrigr = Regex.Match(fname, @"(.)+(fbrigr)\.tif", RegexOptions.IgnoreCase).Success;
                             var fbrigv = Regex.Match(fname, @"(.)+(fbrigv)\.tif", RegexOptions.IgnoreCase).Success;
                             var fbspi = Regex.Match(fname, @"(.)+(fbspi)\.tif", RegexOptions.IgnoreCase).Success;
-
-                            if (fbrigr)
+                            if (fbrig)
+                            {
+                                emLabels.FlagStatus = "Missing recto or verso indicator in filename";
+                                emLabels.ObjectType = "Cover";
+                                emLabels.Label = "Back cover";
+                                dipsCompliant = false;
+                            }
+                            else if (fbrigr)
                             {
                                 emLabels.FlagStatus = "";
                                 emLabels.ObjectType = "Cover";
-                                emLabels.Label = "Back cover inside";
+                                emLabels.Label = "Inside back cover";
                             }
                             else if (fbrigv)
                             {
@@ -721,6 +902,8 @@ namespace HMDSharepointChecker
                                 emLabels.FlagStatus = errString;
                                 emLabels.ObjectType = "Page";
                                 emLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
 
 
@@ -728,26 +911,83 @@ namespace HMDSharepointChecker
                         else
                         {
                             string errString = "Unexpected characters in filename. Flag for investigation";
-                            emLabels.Filename = fname;
+                            emLabels.FileName = fname;
                             emLabels.FlagStatus = errString;
                             emLabels.ObjectType = "Page";
                             emLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
                         }
                         endMatter.Add(emLabels);
                     }
                 }
 
-                // Sort everything by filename at this point
-                frontMatter = frontMatter.OrderBy(o => o.Filename).ToList();
-                folios = folios.OrderBy(o => o.Filename).ToList();
-                endFlysheets = endFlysheets.OrderBy(o => o.Filename).ToList();
-                endMatter = endMatter.OrderBy(o => o.Filename).ToList();
-                numericFiles = numericFiles.OrderBy(o => o.Filename).ToList();
+                if (otherFiles.Any()) // checks for control shot etc and anything out of the ordinary
+                {
 
+                    foreach (string fname in otherFiles)
+                    {
+                        FileLabels unclassifiedLabels = new FileLabels();
+
+                        List<String> others = new List<String>();
+                        string[] split = fname.Split('.');
+                        string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
+                        string fileExtension = split.Last(); // tif
+                        string[] split2 = shelfmark_filename.Split('_');
+                        string derivedShelfmark = string.Join(".", split2.Take(split2.Length - 1)); // shelfmark
+                        derivedShelfmark = derivedShelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+                        theShelfmark = derivedShelfmark;
+                        string derivedFilename = split2.Last();
+
+                        folderDerivedShelfmark = derivedShelfmark;
+                        // check derived shelfmark against inputShelfmark
+                        var checkShelfmark = inputShelfmark;
+
+                        
+
+                        if (!theShelfmark.Contains(inputShelfmark) && !inputShelfmark.Contains(theShelfmark))
+                        {
+                            unclassifiedLabels.FileName = fname;
+                            unclassifiedLabels.FlagStatus = "Does not meet DIPS standards and filename not derived from shelfmark";
+                            unclassifiedLabels.ObjectType = "Unknown";
+                            unclassifiedLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
+                        }
+                        else if (derivedFilename.ToUpper().ToLower().Contains("control"))
+                        {
+                            unclassifiedLabels.FileName = fname;
+                            unclassifiedLabels.FlagStatus = "Does not meet DIPS standards - possible control shot";
+                            unclassifiedLabels.ObjectType = "Control shot";
+                            unclassifiedLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+                        }
+                        else
+                        {
+                            unclassifiedLabels.FileName = fname;
+                            unclassifiedLabels.FlagStatus = "Does not meet DIPS standards";
+                            unclassifiedLabels.ObjectType = "Unknown";
+                            unclassifiedLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+                        }
+
+                        unclassified.Add(unclassifiedLabels);
+                    }
+                }
+
+                // Sort everything by filename at this point
+                frontMatter = frontMatter.OrderBy(o => o.FileName).ToList();
+                frontFlysheets = frontFlysheets.OrderBy(o => o.SubOrder).ToList(); // flysheets need to be ordered numerically
+                folios = folios.OrderBy(o => o.SubOrder).ToList();
+                endFlysheets = endFlysheets.OrderBy(o => o.SubOrder).ToList();
+                endMatter = endMatter.OrderBy(o => o.FileName).ToList();
+                numericFiles = numericFiles.OrderBy(o => o.SubOrder).ToList(); // was filename but can sort numeric files by SubOrder now!
+                unclassified = unclassified.OrderBy(o => o.FileName).ToList();
 
                 // Flagging DIPS compliance mismatches:
                 bool containsDIPSNames = false;
-                if (FMExists || FOLExists || EFSExists || EMExists)
+                if (FMExists || FFSExists || FOLExists || EFSExists || EMExists)
                 {
                     containsDIPSNames = true;
                 }
@@ -755,9 +995,32 @@ namespace HMDSharepointChecker
                 if (containsDIPSNames && numFOLExists) // if numerically labelled folios exist alongside any DIPS compliant names...
                 {
                     
-                    Console.WriteLine("Mixture of DIPS-compliant and non-compliant filenames in shelfmark {0}", folderDerivedShelfmark);
+                    Console.WriteLine("Mixture of DIPS-compliant and numerical filenames in shelfmark {0}", folderDerivedShelfmark);
                     String columnName = "DIPS_Compliance";
                     String message = "Mixture";
+                    if (!dipsCompliant)
+                    {
+                        message += "; Contains DIPS-invalid filenames";
+                    }
+                    if (!orderCheck)
+                    {
+                        message += "; Non-consecutive filenames";
+                    }
+                    try
+                    {
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                    }
+                }
+                else if (!dipsCompliant)
+                {
+                    Console.WriteLine("{0} contains filenames that do not meet DIPS standards", folderDerivedShelfmark);
+                    String columnName = "DIPS_Compliance";
+                    String message = "Invalid filenames";
                     try
                     {
                         SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
@@ -788,6 +1051,10 @@ namespace HMDSharepointChecker
                 {
                     allFilesSorted.Add(fm);
                 }
+                foreach (FileLabels ffs in frontFlysheets)
+                {
+                    allFilesSorted.Add(ffs);
+                }
                 foreach (FileLabels fol in folios)
                 {
                     allFilesSorted.Add(fol);
@@ -806,19 +1073,22 @@ namespace HMDSharepointChecker
                 {
                     allFilesSorted.Add(em);
                 }
+                foreach (FileLabels oth in unclassified)
+                {
+                    allFilesSorted.Add(oth);
+                }
 
             } // if at least some DIPS-compliant filenames exist
             else // is fully non-DIPS compliant and just has numerical filenames, so just sort this normally
             {
+                bool compliantFilenames = true;
                 FileLabels numFile = new FileLabels();
-
                 List<String> sortedFilenames = fileNames.OrderBy(x => x).Select(x => x.ToString()).ToList();
+                int orderCheckNum = 0;
                 foreach (var sfn in sortedFilenames)
                 {
                     List<String> nums = new List<String>();
-                    numFile.Filename = sfn;
-                    numFile.FlagStatus = ""; // errorString
-                    numFile.ObjectType = "Page";
+                   
                     string[] split = sfn.Split('.');
                     string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
                     string fileExtension = split.Last(); // tif
@@ -827,22 +1097,84 @@ namespace HMDSharepointChecker
                     string derivedFilename = split2.Last();
                     string noZerosName = derivedFilename.TrimStart('0');
                     noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
+                    int fileNameNumber = Int32.Parse(noZerosName);
+                    if (fileNameNumber - orderCheckNum != 1)
+                    {
+                        orderCheck = false;
+                        compliantFilenames = false;
+                    }
+                    orderCheckNum = fileNameNumber;
+
+                    string matchString = theShelfmark + @"_([0-9])+\.tif";
+
+                    var match = Regex.Match(sfn, matchString, RegexOptions.IgnoreCase);
+                    
+                    numFile.FileName = sfn;
+                    numFile.FlagStatus = ""; // errorString
+                    numFile.ObjectType = "Page";
                     numFile.Label = noZerosName; // just get the number from the filename
+
+                    if (!match.Success)
+                    {
+                        compliantFilenames = false;
+                        Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
+                        string errString = "Unexpected characters in filename. Flag for investigation";
+                        numFile.FlagStatus = errString;
+
+                    }
 
                     allFilesSorted.Add(numFile);
                 }
+
+                if (compliantFilenames)
+                {
+
+                    String columnName = "DIPS_Compliance";
+                    String message = "Full (numeric)";
+                    try
+                    {
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                    }
+
+                }
+                else
+                {
+                    String columnName = "DIPS_Compliance";
+                    String message = "Invalid (numeric)";
+                    if (!orderCheck)
+                    {
+                        message += "; Non-consecutive filenames";
+                    }
+                    try
+                    {
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                    }
+                }
+
             }
 
             // At this stage you have allFilesSorted as a list-of-lists with
            // filename , flagStatus, objectType, Label 
            //- flagStatus is a string that is either empty (all good!) or contains an error message
            // objectType is jut page, cover, flysheet etc
-           // label is "back cover inside", "folio 5v" etc
+           // label is "Inside back cover", "folio 5v" etc
            for(int i = 0; i<allFilesSorted.Count; i++)
             {
                 string orderNumber = (i + 1).ToString();
                 allFilesSorted[i].OrderNumber = orderNumber;
             }
+
+           
 
            // now (each item in) allFilesSorted contains a FileLabels object with an associated
            //filename
@@ -853,6 +1185,8 @@ namespace HMDSharepointChecker
            // (all strings)
             return allFilesSorted;
         }
+
+       
 
         private static bool writeFileLabelsToCSV(List<FileLabels> ShelfmarkFilesLabels, String outFolder)
         {
@@ -897,7 +1231,7 @@ namespace HMDSharepointChecker
                         csvFile.NextRecord(); // skips to next line...
                         foreach (var record in ShelfmarkFilesLabels)
                         { 
-                            csvFile.WriteField(record.Filename); // filename
+                            csvFile.WriteField(record.FileName); // filename
                             csvFile.WriteField(record.OrderNumber); // order number
                             csvFile.WriteField(record.ObjectType); // object type
                             csvFile.WriteField(record.Label); // label

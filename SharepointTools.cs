@@ -13,15 +13,16 @@ namespace HMDSharepointChecker
         public string ID { get; set; }
         public string Title { get; set; } 
         public string Location { get; set; }
-
         public string MetadataSource { get; set; }
+        public string SystemNumber { get; set; }
 
-        public HMDSPObject(string id, string title, string loc, string mdsource)
+        public HMDSPObject(string id, string title, string loc, string mdsource, string sysno)
         {
             ID = id;
             Title = title;
             Location = loc;
             MetadataSource = mdsource;
+            SystemNumber = sysno;
         }
         public HMDSPObject()
         {
@@ -29,6 +30,7 @@ namespace HMDSharepointChecker
             Title = null;
             Location = null;
             MetadataSource = null;
+            SystemNumber = null;
         }
     }
 
@@ -44,10 +46,11 @@ namespace HMDSharepointChecker
         public bool SourceFolderPathValidElsewhere { get; set; }
         public bool BadShelfmark { get; set; }
         public string MetadataSource { get; set; }
+        public string SystemNumber { get; set; }
 
 
 
-        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid, bool badSM, string metadataSource)
+        public HMDObject(string id, string shelfmark, string sfpath, string folderstatus, bool adexists, bool sfvalid, string fsfpath, bool altvalid, bool badSM, string metadataSource, string sysno)
         {
             ID = id;
             Shelfmark = shelfmark;
@@ -59,6 +62,7 @@ namespace HMDSharepointChecker
             SourceFolderPathValidElsewhere = altvalid;
             BadShelfmark = badSM;
             MetadataSource = metadataSource;
+            SystemNumber = sysno;
 
         }
         public HMDObject()
@@ -73,6 +77,7 @@ namespace HMDSharepointChecker
             SourceFolderPathValidElsewhere = false;
             BadShelfmark = false;
             MetadataSource = null;
+            SystemNumber = null;
         }
 
     }
@@ -216,8 +221,12 @@ namespace HMDSharepointChecker
                     clientContext.Load(oItems);
                     clientContext.ExecuteQuery();
 
-
                     List<HMDSPObject> itemsFound = new List<HMDSPObject>();
+                    if (oItems.Count < 1)
+                    {
+                        Console.WriteLine("Invalid sharepoint query - not found. Ensure the shelfmark/project you entered matches the one in sharepoint exactly!\nPress any key to exit.");
+                        return itemsFound;
+                    }
 
                     var itemCounter = 1;
                     foreach (Microsoft.SharePoint.Client.ListItem oListItem in oItems)
@@ -244,6 +253,14 @@ namespace HMDSharepointChecker
                         var itemTitle = oListItem.FieldValues["Title"].ToString();
                         var itemLocation = "";
                         var itemMetadataSource = oListItem.FieldValues["IAMS_x002f_Aleph"].ToString();
+                        var itemSystemNumber = oListItem.FieldValues["System_x0020_number"];
+                        var sysNoString = string.Empty;
+                        if (itemSystemNumber != null) sysNoString = itemSystemNumber.ToString();
+                        else
+                        {// Don't print this out for now...
+                           // Console.WriteLine("Could not retrieve Aleph System Number for shelfmark {0}", itemTitle);
+                        }
+                       
                         try
                         {
                             itemLocation = ((Microsoft.SharePoint.Client.FieldUrlValue)(oListItem["Source_x0020_Folder0"])).Url.ToString();
@@ -255,7 +272,8 @@ namespace HMDSharepointChecker
                             thisItem.ID = itemID;
                             thisItem.Title = itemTitle;
                             thisItem.Location = null; // Still want to write out null values of item location so we can report in sharepoint later!
-                            thisItem.MetadataSource = itemMetadataSource; 
+                            thisItem.MetadataSource = itemMetadataSource;
+                            thisItem.SystemNumber = sysNoString;
                             itemsFound.Add(thisItem);
 
                             continue; // If the itemLocation is empty, we don't care, but this throws an exception so need to skip over this item
@@ -270,6 +288,7 @@ namespace HMDSharepointChecker
                             thisItem.Title = itemTitle;
                             thisItem.Location = itemLocation;
                             thisItem.MetadataSource = itemMetadataSource;
+                            thisItem.SystemNumber = sysNoString;
 
 
                         }
@@ -331,6 +350,7 @@ namespace HMDSharepointChecker
                 string Shelfmark = item.Title;
                 string sourceFolderSP = item.Location;
                 string metadataSource = item.MetadataSource;
+                string sysno = item.SystemNumber;
 
                 if (!String.IsNullOrEmpty(sourceFolderSP))
                 {
@@ -402,6 +422,7 @@ namespace HMDSharepointChecker
                         HMDItem.FullSourceFolderPath = fullSourceFolderPath;
                         HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
                         HMDItem.MetadataSource = metadataSource;
+                        HMDItem.SystemNumber = sysno;
 
 
                     }
@@ -419,6 +440,7 @@ namespace HMDSharepointChecker
                         HMDItem.FullSourceFolderPath = fullSourceFolderPath;
                         HMDItem.SourceFolderPathValidElsewhere = sourceFolderValidElsewhere;
                         HMDItem.MetadataSource = metadataSource;
+                        HMDItem.SystemNumber = sysno;
                         folderExistenceStatus.Add(HMDItem);
                         continue;
 
@@ -438,6 +460,7 @@ namespace HMDSharepointChecker
                     HMDItem.FullSourceFolderPath = null;
                     HMDItem.SourceFolderPathValidElsewhere = false;
                     HMDItem.MetadataSource = metadataSource;
+                    HMDItem.SystemNumber = sysno;
 
                 }
                 folderExistenceStatus.Add(HMDItem);
