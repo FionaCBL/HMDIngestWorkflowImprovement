@@ -650,7 +650,7 @@ namespace HMDSharepointChecker
                             {
                                 folioLabels.FlagStatus = "";
                                 folioLabels.ObjectType = "Page";
-                                string frString = "Folio " + noZerosName;
+                                string frString = "f. " + noZerosName;
                                 folioLabels.Label = frString;
                                 var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
                                 folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
@@ -661,7 +661,7 @@ namespace HMDSharepointChecker
                             {
                                 folioLabels.FlagStatus= ""; // little bit redundant, remove after testing this works
                                 folioLabels.ObjectType="Page";
-                                string frString = "Folio " + noZerosName;
+                                string frString = "f. " + noZerosName;
                                 folioLabels.Label=frString;
                                 var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
                                 folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
