@@ -504,6 +504,8 @@ namespace HMDSharepointChecker
                                 frontMatterLabels.FlagStatus = errString;
                                 frontMatterLabels.ObjectType = "Page";
                                 frontMatterLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
 
                             }
                         }
@@ -514,7 +516,9 @@ namespace HMDSharepointChecker
                             frontMatterLabels.FlagStatus = errString;
                             frontMatterLabels.ObjectType = "Page";
                             frontMatterLabels.Label = derivedFilename;
-                           
+                            dipsCompliant = false;
+
+
 
                         }
                         frontMatter.Add(frontMatterLabels);
@@ -583,11 +587,12 @@ namespace HMDSharepointChecker
                             }
                             else
                             {
-                                Console.WriteLine("ERROR: SOMETHING HAS GONE BADLY WRONG WITH ORDER & LABEL GEN... CHECK WHAT");
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 frontFlysheetLabels.FlagStatus = errString;
                                 frontFlysheetLabels.ObjectType = "Page";
                                 frontFlysheetLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
 
                             }
                         }
@@ -598,6 +603,8 @@ namespace HMDSharepointChecker
                             frontFlysheetLabels.FlagStatus = errString;
                             frontFlysheetLabels.ObjectType = "Page";
                             frontFlysheetLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
 
 
                         }
@@ -668,6 +675,8 @@ namespace HMDSharepointChecker
                                 folioLabels.FlagStatus=errString;
                                 folioLabels.ObjectType="Page";
                                 folioLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
 
                         }
@@ -678,6 +687,8 @@ namespace HMDSharepointChecker
                             folioLabels.FlagStatus = errString;
                             folioLabels.ObjectType = "Page";
                             folioLabels.Label=derivedFilename;
+                            dipsCompliant = false;
+
                         }
                         folios.Add(folioLabels);
                     }
@@ -729,6 +740,8 @@ namespace HMDSharepointChecker
                                 Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
                                 string errString = "Unexpected characters in filename. Flag for investigation";
                                 numFLabels.FlagStatus = errString;
+                                dipsCompliant = false;
+
 
                             }
                             else if (!orderCheck)
@@ -811,6 +824,8 @@ namespace HMDSharepointChecker
                                 efsLabels.FlagStatus = errString; // error string
                                 efsLabels.ObjectType = "Flysheet";
                                 efsLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
                         }
                         else
@@ -820,6 +835,8 @@ namespace HMDSharepointChecker
                             efsLabels.FlagStatus = errString;
                             efsLabels.ObjectType = "Page";
                             efsLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
 
                         }
                         endFlysheets.Add(efsLabels);
@@ -885,6 +902,8 @@ namespace HMDSharepointChecker
                                 emLabels.FlagStatus = errString;
                                 emLabels.ObjectType = "Page";
                                 emLabels.Label = derivedFilename;
+                                dipsCompliant = false;
+
                             }
 
 
@@ -896,6 +915,8 @@ namespace HMDSharepointChecker
                             emLabels.FlagStatus = errString;
                             emLabels.ObjectType = "Page";
                             emLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
                         }
                         endMatter.Add(emLabels);
                     }
@@ -931,6 +952,8 @@ namespace HMDSharepointChecker
                             unclassifiedLabels.FlagStatus = "Does not meet DIPS standards and filename not derived from shelfmark";
                             unclassifiedLabels.ObjectType = "Unknown";
                             unclassifiedLabels.Label = derivedFilename;
+                            dipsCompliant = false;
+
                         }
                         else if (derivedFilename.ToUpper().ToLower().Contains("control"))
                         {
@@ -964,7 +987,7 @@ namespace HMDSharepointChecker
 
                 // Flagging DIPS compliance mismatches:
                 bool containsDIPSNames = false;
-                if (FMExists || FOLExists || EFSExists || EMExists)
+                if (FMExists || FFSExists || FOLExists || EFSExists || EMExists)
                 {
                     containsDIPSNames = true;
                 }
