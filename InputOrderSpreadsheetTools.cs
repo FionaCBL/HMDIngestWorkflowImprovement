@@ -465,10 +465,11 @@ namespace HMDSharepointChecker
                         noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
 
 
-
+                        var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif",@".tif");
                         string matchString = derivedShelfmark+@"_((fble)((f)|(fv)|(fr)))\.tif";
                         var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
-                        if (match.Success)
+                        var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success || altMatch.Success)
                         {
                             frontMatterLabels.FileName = fname;
                             var fblef = Regex.Match(fname, @"(.)+(fblef)\.tif", RegexOptions.IgnoreCase).Success;
@@ -549,9 +550,13 @@ namespace HMDSharepointChecker
                         noZerosName = noZerosName.Length > 0 ? noZerosName : "0";
                             //orderNumber.Add(Int32.Parse(noZerosName));
 
+                        
+
                         string matchString = derivedShelfmark + @"_(fs[0-9]+[rv])\.tif";
                         var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
-                        if (match.Success)
+                        var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif", @".tif");
+                        var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success || altMatch.Success)
                         { 
                            
 
@@ -640,7 +645,10 @@ namespace HMDSharepointChecker
                         string matchString = derivedShelfmark + @"_(f)([0-9])+([rv])\.tif";
                         List<String> fols = new List<String>();
                         var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
-                        if (match.Success)
+
+                        var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif", @".tif");
+                        var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success || altMatch.Success)
                         {
                             folioLabels.FileName = fname;
                             var fr = Regex.Match(fname, @"(.)+((f)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
@@ -729,12 +737,16 @@ namespace HMDSharepointChecker
                             string matchString = theShelfmark + @"_([0-9])+\.tif";
                             var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
 
+                            var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif", @".tif");
+                            var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+
+
                             numFLabels.FileName = fname;
                             numFLabels.FlagStatus = "";
                             numFLabels.ObjectType = "Page";
                             numFLabels.Label = derivedFilename;
 
-                            if (!match.Success)
+                            if (!match.Success && !altMatch.Success)
                             {
 
                                 Console.WriteLine("ERROR: Doesn't match numeric filenaming pattern");
@@ -794,7 +806,10 @@ namespace HMDSharepointChecker
                         string matchString = derivedShelfmark + @"_((fse)[0-9]+[rv])\.tif";
 
                         var match = Regex.Match(fname, matchString, RegexOptions.IgnoreCase);
-                        if (match.Success)
+
+                        var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif", @".tif");
+                        var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success || altMatch.Success)
                         {
                             efsLabels.FileName = fname;
                             var fser = Regex.Match(fname, @"(.)+((fse)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
@@ -864,7 +879,10 @@ namespace HMDSharepointChecker
 
                         List<String> ema = new List<String>();
                         var match = Regex.Match(fname,matchString, RegexOptions.IgnoreCase);
-                        if (match.Success)
+
+                        var cleanedFName = fname.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~").Replace("_tif", @".tif");
+                        var altMatch = Regex.Match(cleanedFName, matchString, RegexOptions.IgnoreCase);
+                        if (match.Success || altMatch.Success)
                         {
                             emLabels.FileName = fname;
                             var fbrig = Regex.Match(fname, @"(.)+(fbrig)\.tif", RegexOptions.IgnoreCase).Success;
