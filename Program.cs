@@ -286,7 +286,7 @@ namespace HMDSharepointChecker
 
             if (queryMetadata)
             {
-                LibraryAPIs.queryMetadataAPIs(SourceFolderStatus);
+                LibraryAPIs.queryMetadataAPIs(spURL,"Digitisation Workflow",SourceFolderStatus);
             }
             // ======================================================================
 
