@@ -279,6 +279,7 @@ namespace HMDSharepointChecker
                     Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
                     
                 }
+                Console.WriteLine("=======================================\nQuerying metadata APIs to retrieve child shelfmark information...\n=======================================");
                 var iamsRecords = LibraryAPIs.queryMetadataAPIs(spURL, "Digitisation Workflow", SourceFolderStatus);
 
                 var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow",iamsRecords);

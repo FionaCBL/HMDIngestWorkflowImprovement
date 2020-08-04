@@ -89,9 +89,6 @@ namespace HMDSharepointChecker
         {
             // This function makes sure that you aren't querying Aleph for manuscripts, or similar
             List<IamsItem> IAMSRecords = new List<IamsItem>();
-            List<List<AlephItem>> AlephRecords = new List<List<AlephItem>>();
-
-            bool ferror = false;
             foreach (HMDObject item in itemList)
             {
                 if(item.MetadataSource.ToUpper().ToLower().Contains("aleph"))
@@ -135,13 +132,7 @@ namespace HMDSharepointChecker
                         }
                         SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
                         SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                        if (iamsItem.ChildRecordTitles.Count > 0)
-                        {
-                            foreach (var childRecord in iamsItem.ChildRecordTitles)
-                            {
-                                var recordTitle = childRecord;
-                            }
-                        }
+                        
                     }
 
                     catch (Exception ex)
