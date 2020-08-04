@@ -1,6 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Xml;
+using System.Xml.Linq;
+using System.Linq;
+
 
 
 namespace HMDSharepointChecker
@@ -21,6 +25,7 @@ namespace HMDSharepointChecker
             public bool DeleteFlagPresent { get; set; }
             public string ItemType { get; set; }
             public string CatalogueStatus { get; set; }
+         
 
 
 
@@ -59,45 +64,20 @@ namespace HMDSharepointChecker
 
         public class AlephItem // adding additional information to the things retrieved from the HMD sharepoint site
         {
-            public string SharepointID { get; set; }
-            public string ItemShelfmark { get; set; }
-            public string ItemDescription { get; set; }
-            public string ArkIdentifier { get; set; }
-            public string SubSubSeries { get; set; }
-            public string LogicalLabel { get; set; }
-            public string LogicalType { get; set; }
-            public List<string> ChildRecordTitles { get; set; }
-            public List<string> DeletedChildRecordTitles { get; set; }
-            public bool DeleteFlagPresent { get; set; }
+            public string FieldTitle { get; set; }
+            public string FieldValue { get; set; }
 
 
-
-            public AlephItem(string sharepointID, string itemShelfmark, string iamsTitle, string iamsArk, string subSubSeries, string logicalLabel, string logicalType, List<string> childRecords, List<string> deletedChildRecordTitles, bool deleteFlag)
+            public AlephItem(string fieldTitle, string fieldValue)
             {
-                SharepointID = sharepointID;
-                ItemShelfmark = itemShelfmark;
-                ItemDescription = iamsTitle;
-                ArkIdentifier = iamsArk;
-                SubSubSeries = subSubSeries;
-                LogicalLabel = logicalLabel;
-                LogicalType = logicalType;
-                ChildRecordTitles = childRecords;
-                DeletedChildRecordTitles = deletedChildRecordTitles;
-                DeleteFlagPresent = deleteFlag;
+                FieldTitle = fieldTitle;
+                FieldValue = fieldValue;
 
             }
             public AlephItem()
             {
-                SharepointID = null;
-                ItemShelfmark = null;
-                ItemDescription = null;
-                ArkIdentifier = null;
-                SubSubSeries = null;
-                LogicalLabel = null;
-                LogicalType = null;
-                ChildRecordTitles = null;
-                DeletedChildRecordTitles = null;
-                DeleteFlagPresent = false;
+                FieldTitle = null;
+                FieldValue = null;
             }
         }
 
@@ -105,32 +85,98 @@ namespace HMDSharepointChecker
 
         static public readonly string IAMSURL = @"http://v12l-iams3/IAMSRestAPILive/api/archive/GetRecordByreference?reference=";
 
-        public static bool queryMetadataAPIs (List<HMDObject> itemList)
+        public static List<IamsItem> queryMetadataAPIs (String spURL,String spList,List<HMDObject> itemList)
         {
             // This function makes sure that you aren't querying Aleph for manuscripts, or similar
             List<IamsItem> IAMSRecords = new List<IamsItem>();
-
-            bool ferror = false;
             foreach (HMDObject item in itemList)
             {
                 if(item.MetadataSource.ToUpper().ToLower().Contains("aleph"))
                 {
-                    continue; // currently do nothing for aleph, fucntionality still WIP
+                    List<AlephItem> returnedAlephRecords = GetAlephRecords(item);
+                    string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    outFolder += @"\HMDSharepoint_AlephRecords\";
+                    outFolder += item.Shelfmark+"_"+item.SystemNumber;
+                    if (!Directory.Exists(outFolder))
+                    {
+                        Directory.CreateDirectory(outFolder);
+                    }
+                    writeAlephCSV(item.Shelfmark, returnedAlephRecords, outFolder);                    
 
                 }
                 else if (item.MetadataSource.ToLower().ToUpper().Contains("IAMS"))
                 {
                     var IAMSitem = GetIAMSRecords(item);
                     IAMSRecords.Add(IAMSitem);
+
                 }
 
             }
+            foreach(var iamsItem in IAMSRecords)
+            {
+                if (iamsItem.SharepointID != null)
+                {
+                    try
+                    {
+                        String columnName = "IAMSCatalogueStatusIsPublished";
+                        var theShelfmark = iamsItem.ItemShelfmark;
+                        var itemID = iamsItem.SharepointID;
+                        var message = "";
+                        if (iamsItem.CatalogueStatus.ToUpper().ToLower().Contains("published"))
+                        {
+                            message = "Yes";
+                        }
+                        else
+                        {
+                            message = "No";
+                        }
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        
+                    }
 
-                return !ferror;
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing IAMS catalogue status. \nException {0}", ex);
+                    }
+                    try
+                    {
+                        String columnName = "Shelfmark_HasIAMSDeleteFlag";
+                        var theShelfmark = iamsItem.ItemShelfmark;
+                        var itemID = iamsItem.SharepointID;
+                        var message = "";
+                        if (iamsItem.DeleteFlagPresent)
+                        {
+                            message = "Yes";
+                        }
+                        else
+                        {
+                            message = "No";
+                        }
+                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                    
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Problem writing IAMS delete flag status. \nException {0}", ex);
+
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+                
+            }
+
+                return IAMSRecords;
         }
 
         public static IamsItem GetIAMSRecords(HMDObject item)
         {
+
+            // Remember to get the list of child records and pass this back to the image order csv somehow...
             String shelfmark = item.Shelfmark;
             String itemID = null;
 
@@ -191,12 +237,22 @@ namespace HMDSharepointChecker
                 var xmlLogicalLabel = xmlDocumentIams.SelectSingleNode("//LogicalLabel");
                 var xmlLogicalType = xmlDocumentIams.SelectSingleNode("//LogicalType");
                 var xmlChildRecords = xmlDocumentIams.SelectNodes("//Children//Child//Reference");
+                var xmlShelfmark = xmlDocumentIams.SelectSingleNode("//Reference");
+            
 
                 var logicalLabel = string.Empty;
                 var logicalType = string.Empty;
 
                 if (xmlNodeArk == null) return null;
                 var iamsArk = xmlNodeArk.InnerText;
+
+                var iamsRetrievedShelfmark = string.Empty;
+                bool deleteFlagShelfmark = false;
+                if (xmlShelfmark != null) iamsRetrievedShelfmark = xmlShelfmark.InnerText;
+                if (iamsRetrievedShelfmark.ToString().Contains("DEL") || iamsRetrievedShelfmark.ToString().Contains(@"D/"))
+            {
+                deleteFlagShelfmark = true;
+            }
 
                 var iamsTitle = string.Empty;
                 if (xmlNodeTitle != null) iamsTitle = xmlNodeTitle.InnerText;
@@ -230,6 +286,12 @@ namespace HMDSharepointChecker
 
 
                 }
+            bool isDeleteFlagPresent = false;
+            if(containsDeletedChildRecords || deleteFlagShelfmark)
+            {
+                isDeleteFlagPresent = true;
+                
+            }
 
             var iamsItem = new IamsItem
             {
@@ -242,7 +304,7 @@ namespace HMDSharepointChecker
                 LogicalType = logicalType,
                 ChildRecordTitles = childRecordTitles,
                 DeletedChildRecordTitles = deletedChildRecordTitles,
-                DeleteFlagPresent = containsDeletedChildRecords,
+                DeleteFlagPresent = isDeleteFlagPresent,
                 ItemType = iamsItemType,
                 CatalogueStatus = iamsCatStatus
                 };
@@ -252,6 +314,165 @@ namespace HMDSharepointChecker
                 return iamsItem;
         }
 
+        public static List<AlephItem> GetAlephRecords(HMDObject item)
+        {
+            String shelfmark = item.Shelfmark;
+            String itemID = null;
+
+            if (item.ID != null) // allows for some flexibility on being tied to sharepoint here
+            {
+                itemID = item.ID;
+            }
+
+            if(item.SystemNumber.Length <1)
+            {
+                Console.WriteLine("No Aleph system number found when attempting to look up Aleph item for shelfmark: {0}", shelfmark);
+                return null;
+            }
+            var systemNumber = item.SystemNumber;
+
+
+            // build the request
+            var alephURL = "http://xserver.bl.uk/X";
+            var alephRequest = alephURL+"?op=find_doc&doc_num="+systemNumber+ "&base=BLL01"; // uses default BL base system number
+          
+            // Run the first request:
+            var xmlTextReaderAleph = new XmlTextReader(alephRequest);
+            var xmlDocumentAleph = new XmlDocument();
+            try
+            {
+                xmlDocumentAleph.Load(xmlTextReaderAleph);
+            }
+            catch
+            {
+                return null;
+            }
+            var alephRecords = xmlDocumentAleph.SelectNodes("//find-doc//record//metadata//oai_marc");
+
+
+            foreach (XmlNode element in alephRecords)
+
+            {
+                var thisvar = element.InnerText;
+            }
+
+
+            // this needs sorting out, but basically want a csv to write the attribute ID as a column and the value as a field
+            // not sure what to do yet if the node has sub-lists, but debug this step by step and see if the node type changes?
+            // nodes with sublists are all varfields!
+
+            List<AlephItem> alephReturnedItems = new List<AlephItem>();
+
+            var doc = XDocument.Load(alephRequest);
+
+
+            var fixedfields = from @fixedfield in doc.Descendants("fixfield")
+                              let fixedfieldName = (string)@fixedfield.Attribute("id")
+                              let fixedfieldValue = (string)fixedfield.Value
+                            select new
+                            {
+                                FixedFieldName = fixedfieldName,
+                                FixedFieldValue = fixedfieldValue
+                            };
+
+            var varfields = from @varfield in doc.Descendants("varfield")
+                        let varfieldName = (string)@varfield.Attribute("id")
+                        from subfield in @varfield.Descendants("subfield")
+                        select new
+                        {
+                            VarfieldName = varfieldName,
+                            SubfieldLabel = (string)subfield.Attribute("label"),
+                            SubfieldContents = (string)subfield.Value,
+                        };
+
+
+            foreach( var field in fixedfields)
+            {
+                var alephItem = new AlephItem();
+                alephItem.FieldTitle = field.FixedFieldName;
+                alephItem.FieldValue = field.FixedFieldValue;
+                alephReturnedItems.Add(alephItem);
+            }
+            foreach (var field in varfields)
+            {
+                var alephItem = new AlephItem();
+   
+                alephItem.FieldTitle= field.VarfieldName+field.SubfieldLabel;
+                alephItem.FieldValue = field.SubfieldContents;
+                alephReturnedItems.Add(alephItem);
+            }
+
+            return alephReturnedItems;
+        }
+
+        private static bool writeAlephCSV(string shelfmark,List<AlephItem> AlephRecords, String outFolder)
+        {
+            bool fError = false;
+
+            try // to write the csv...
+            {
+                List<String> strHeaders = new List<string>();
+                foreach(AlephItem aItem in AlephRecords)
+                {
+                    strHeaders.Add(aItem.FieldTitle);
+                }
+
+                System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
+                string fNameString = "AlephRecords";
+                string outPath = outFolder + @"\" + fNameString + ".csv";
+
+                if (File.Exists(outPath))
+                {
+                    String lastModified = File.GetLastWriteTime(outPath).ToString("yyyyMMdd_HH-mm-ss");
+                    string oldFilePath = outFolder + @"\" + fNameString + "_" + lastModified + ".csv";
+
+                    try
+                    {
+                        File.Move(outPath, oldFilePath); // moves existing imageorder.csv file to include the last modified time
+                                                         // leaves newest created file as 'imageorder.csv'
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Could not move existing AlephRecords.csv from {0} to {1}.\nException: {2}", outPath, oldFilePath, ex);
+                    }
+
+                }
+
+
+                using (var sr = new StreamWriter(outPath, false, uce))
+                {
+                    using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
+                    {
+                        csvFile.Configuration.Delimiter = "\t";
+                        //csvFile.Configuration.HasExcelSeparator = true;
+
+                        foreach (var header in strHeaders)
+                        {
+                            csvFile.WriteField(header);
+                        }
+                        csvFile.NextRecord(); // skips to next line...
+                        var fieldCounter = 0;
+                        foreach (var record in AlephRecords)
+                        {
+                            csvFile.WriteField(record.FieldValue); // field value
+                            fieldCounter += 1;
+                            var lastRecord = AlephRecords[AlephRecords.Count - 1].FieldValue;
+                            if (fieldCounter >= strHeaders.Count)
+                            {
+                                csvFile.NextRecord();
+                            }
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing CSV File: {0}", ex);
+                fError = true;
+            }
+            return !fError;
+        }
 
 
     }

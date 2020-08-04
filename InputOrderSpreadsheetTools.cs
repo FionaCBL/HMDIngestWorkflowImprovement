@@ -18,9 +18,10 @@ namespace HMDSharepointChecker
         public string Label { get; set; }
         public string OrderNumber { get; set; }
         public int SubOrder { get; set; }
+        public string ChildShelfmarkLabel { get; set; }
 
 
-        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum, int subOrder)
+        public FileLabels(string filename, string flagstatus, string objtype, string label, string ordernum, int subOrder, string childShelfmarkLabel)
         {
             FileName = filename;
             FlagStatus = flagstatus;
@@ -28,6 +29,7 @@ namespace HMDSharepointChecker
             Label = label;
             OrderNumber = ordernum;
             SubOrder = subOrder;
+            ChildShelfmarkLabel = childShelfmarkLabel;
 
         }
         public FileLabels()
@@ -38,12 +40,13 @@ namespace HMDSharepointChecker
             Label = null;
             OrderNumber = null;
             SubOrder = -999;
+            ChildShelfmarkLabel = string.Empty;
         }
 
     }
     class InputOrderSpreadsheetTools
     {
-        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList)
+        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList, List<LibraryAPIs.IamsItem> iamsRecords)
         {
             List<List<FileLabels>> allShelfmarkTIFAndLabels = new List<List<FileLabels>>();
             Console.WriteLine("=======================================\nGenerating image order csv and performing ALTOXML checks...\n=======================================");
@@ -161,7 +164,15 @@ namespace HMDSharepointChecker
                                                           // do you need this?
 
                         // to-do: turn the below stuff into a class of its own
-                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder);
+                        List<String> childShelfmarks = new List<String>();
+                        foreach(var iamsItem in iamsRecords)
+                        {
+                            if (iamsItem.SharepointID == itemID)
+                            {
+                                childShelfmarks = iamsItem.ChildRecordTitles;
+                            }
+                        }
+                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder,childShelfmarks);
                         // shelfmarkLabels is a list of FileLabels objects
                         // each FileLabels object corresponds to a single file and contains:
                         // filename
@@ -190,15 +201,6 @@ namespace HMDSharepointChecker
                                 {
                                     testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
                                 }
-
-                                // If we've got a folder with shelfmark/tiffs then the above line will mess things up
-                                // Fix them again with this line
-                                //if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
-                                //{
-                                //    testTifFolder = "\\" + folderShelfmark;
-                                //    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
-
-                                //}
                                 else
                                 {
                                     testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
@@ -241,8 +243,50 @@ namespace HMDSharepointChecker
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine("Error writing ImageOrder.csv for shelfmark {0} in folder {1}.\nException {2}",shelfmark,tifFolder,ex);
+                                string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
 
+                                string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+                                string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                                try
+                                {
+                                    string testTifFolder = string.Empty;
+                                    var tifFolderItems = tifFolder.Split('\\');
+
+                                    if (Regex.Matches(tifFolder, folderShelfmark).Count > 1)
+
+                                    {
+                                        testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                    }
+                                    else
+                                    {
+                                        testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
+                                    }
+                                    outFolder += testTifFolder;
+                                    var last = tifFolderItems[tifFolderItems.Length - 1];
+                                    var secondLast = tifFolderItems[tifFolderItems.Length - 1];
+
+                                    if (!Directory.Exists(outFolder))
+                                    {
+                                        Directory.CreateDirectory(outFolder);
+                                    }                        // Now write this to a CSV
+                                    Console.WriteLine("Error writing ImageOrder.csv for shelfmark {0} in folder {1}.\nThis could be a folder permissions issue.\nWriting image order CSV to {2}", shelfmark, tifFolder,outFolder);
+
+                                    Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                }
+                                catch
+                                {
+                                    Console.WriteLine("Couldn't set the proper output ImageOrder.csv folder path");
+                                    outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                    outFolder += @"\HMDSharepoint_ImgOrderCSVs" + @"\" + SM_folderFormat;
+                                    if (!Directory.Exists(outFolder))
+                                    {
+                                        Directory.CreateDirectory(outFolder);
+                                    }                        // Now write this to a CSV
+
+                                    Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                }
                             }
 
                         }
@@ -363,7 +407,7 @@ namespace HMDSharepointChecker
             // For all shelfmarks this is then List<List<FileLabels>>
         }
 
-        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders)
+        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders, List<String> childShelfmarks)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
@@ -626,6 +670,8 @@ namespace HMDSharepointChecker
                     {
                         FileLabels folioLabels = new FileLabels();
 
+                        
+
                         List<String> fmat = new List<String>();
                         string[] split = fname.Split('.');
                         string shelfmark_filename = string.Join(".", split.Take(split.Length - 1)); // shelfmark_filename
@@ -654,34 +700,118 @@ namespace HMDSharepointChecker
                             var fr = Regex.Match(fname, @"(.)+((f)[0-9]+[r])\.tif", RegexOptions.IgnoreCase).Success;
                             var fv = Regex.Match(fname, @"(.)+((f)[0-9]+[v])\.tif", RegexOptions.IgnoreCase).Success;
 
-                            if (fr)
+                            if (fr || fv)
                             {
-                                folioLabels.FlagStatus = "";
-                                folioLabels.ObjectType = "Page";
-                                string frString = "f. " + noZerosName;
-                                folioLabels.Label = frString;
-                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
-                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+                                bool matchedChildShelfmark= false;
+
+                                if (!matchedChildShelfmark)
+                                {
 
 
-                            }
-                            else if (fv)
-                            {
-                                folioLabels.FlagStatus= ""; // little bit redundant, remove after testing this works
-                                folioLabels.ObjectType="Page";
-                                string frString = "f. " + noZerosName;
-                                folioLabels.Label=frString;
-                                var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
-                                folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+                                    foreach (var shelfmarkRange in childShelfmarks)
+                                    {
+                                        var thisThing = shelfmarkRange;
+                                        var getEnd = thisThing.Split(',')[1];
+                                        getEnd = Regex.Replace(getEnd, @"\s+", "");
+                                        getEnd = getEnd.Trim('f').ToUpper().ToLower();
+                                        if (noZerosName == getEnd) // should be the case for single folios
+                                        {
+                                            matchedChildShelfmark = true;
+                                            folioLabels.ChildShelfmarkLabel = shelfmarkRange;
+                                            break;
+                                        }
+                                        else if (getEnd.Contains('-'))
+                                        {// you'll get something like "1v-77r" - need to figure out how to convert this into a list
+                                         // remember recto before verso, so 1r, 1v, etc
+                                         // split this string into two (by the hyphen) to have:
+                                         // 1v 77r
+                                         // then strip 'v' and 'r' from the numbers to leave us with
+                                         // 1 77
+                                         // convert these to ints and use as the start and end of a list
+                                         // convert each int to a string in the list you've generated
+                                         // need to duplicate the values of each item in the list
+                                         // then alternately add an 'r' or a 'v' to each value
+                                         // compare first and last values of the list to '1v' and '77r', remove anything that isn't needed
 
 
+                                            var listRanges = getEnd.Split('-');
+                                            var listStartLabel = listRanges[0];
+                                            var listEndLabel = listRanges[1];
+                                            listStartLabel = Regex.Replace(listStartLabel, @"\s+", "");
+                                            listEndLabel = Regex.Replace(listEndLabel, @"\s+", "");
+
+
+                                            var listStart = listRanges[0].Trim('r', 'v', 'f');
+                                            var listEnd = listRanges[1].Trim('r', 'v', 'f');
+                                            List<String> fullShelfmarkRange = new List<String>();
+                                            for (int i = Int32.Parse(listStart); i < Int32.Parse(listEnd) + 1; i++)
+                                            {
+                                                if (i == Int32.Parse(listStart))
+                                                {
+                                                    if (listStartLabel.Contains('r'))
+                                                    {
+                                                        fullShelfmarkRange.Add(i.ToString() + 'r');
+
+                                                    }
+                                                    fullShelfmarkRange.Add(i.ToString() + 'v');
+                                                }
+                                                else if (i == Int32.Parse(listEnd))
+                                                {
+                                                    fullShelfmarkRange.Add(i.ToString() + 'r');
+                                                    if (listEndLabel .Contains('v'))
+                                                    {
+                                                        fullShelfmarkRange.Add(i.ToString() + 'v');
+                                                    }
+
+                                                }
+                                                else
+                                                {
+                                                    fullShelfmarkRange.Add(i.ToString() + 'r');
+                                                    fullShelfmarkRange.Add(i.ToString() + 'v');
+                                                }
+                                            }
+
+                                            if (fullShelfmarkRange.Contains(noZerosName))
+                                            {
+                                                matchedChildShelfmark = true;
+                                                folioLabels.ChildShelfmarkLabel = shelfmarkRange;
+                                                break;
+                                            }
+
+
+                                        }
+
+                                    }
+                                }
+                                if (fr)
+                                {
+                                    folioLabels.FlagStatus = "";
+                                    folioLabels.ObjectType = "Page";
+                                    string frString = "f. " + noZerosName;
+                                    folioLabels.Label = frString;
+                                    var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                    folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 2);
+
+
+                                }
+                                else if (fv)
+                                {
+                                    folioLabels.FlagStatus = ""; // little bit redundant, remove after testing this works
+                                    folioLabels.ObjectType = "Page";
+                                    string frString = "f. " + noZerosName;
+                                    folioLabels.Label = frString;
+                                    var subOrderNumber = Int32.Parse(noZerosName.TrimEnd('r', 'v'));
+                                    folioLabels.SubOrder = subOrderNumber + (subOrderNumber - 1);
+
+
+                                }
                             }
                             else
                             {
                                 Console.WriteLine("ERROR: Folio outside of common DIPS string range. Investigate");
                                 string errString = "Unexpected characters in filename. Flag for investigation";
-                                folioLabels.FlagStatus=errString;
-                                folioLabels.ObjectType="Page";
+                                folioLabels.FlagStatus = errString;
+                                folioLabels.ObjectType = "Page";
                                 folioLabels.Label = derivedFilename;
                                 dipsCompliant = false;
 
@@ -1212,7 +1342,8 @@ namespace HMDSharepointChecker
 
             try // to write the csv...
             {
-                List<String> strHeaders = new List<string>{"File","Order","Type","Label"};
+                
+                List<String> strHeaders = new List<string>{"File","Order","Type","Label","","Child Shelfmarks"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
                 string fNameString = "ImageOrder";
                 string outPath = outFolder + @"\"+fNameString+".csv";
@@ -1254,6 +1385,7 @@ namespace HMDSharepointChecker
                             csvFile.WriteField(record.ObjectType); // object type
                             csvFile.WriteField(record.Label); // label
                             csvFile.WriteField(record.FlagStatus); // error flag status
+                            csvFile.WriteField(record.ChildShelfmarkLabel); // child shelfmark (if any)
                         
                             if (ShelfmarkFilesLabels.IndexOf(record) != ShelfmarkFilesLabels.Count - 1)
                             {

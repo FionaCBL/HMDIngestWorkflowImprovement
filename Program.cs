@@ -79,10 +79,11 @@ namespace HMDSharepointChecker
 
             Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
             String inputEnv = Console.ReadLine();
-            if (inputEnv.ToLower() == "yes")
+            if (inputEnv.ToLower() == "yes" || inputEnv.ToLower()=="y")
             {
                 env = "prod";
             }
+            
 
             // do initial setup
             Dictionary<String, String> variablesDictionary = InitialSetup(env);
@@ -94,7 +95,7 @@ namespace HMDSharepointChecker
 
             Console.WriteLine("This program searches sharepoint using either projects or individual shelfmarks. Use shelfmarks? (yes/no)");
             String useShelfmarksYN = Console.ReadLine();
-            if (useShelfmarksYN.ToLower() == "yes")
+            if (useShelfmarksYN.ToLower() == "yes" || useShelfmarksYN.ToLower() == "y")
             {
                 Console.WriteLine("Enter a shelfmark name (must match Sharepoint site)");
                 String inputSingleShelfmark = Console.ReadLine();
@@ -114,7 +115,7 @@ namespace HMDSharepointChecker
 
                 Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
                 String inputProjectYN = Console.ReadLine();
-                if (inputProjectYN.ToLower() == "yes")
+                if (inputProjectYN.ToLower() == "yes" || inputProjectYN.ToLower()=="y")
                 {
                     Console.WriteLine("Type a project name (must match sharepoint record)", project);
                     String inputProject = Console.ReadLine();
@@ -150,25 +151,25 @@ namespace HMDSharepointChecker
 
             Console.WriteLine("Run shelfmark source folder checks? yes/no");
             String inputSourceFolderCheck = Console.ReadLine();
-            if (inputSourceFolderCheck.ToLower() == "yes")
+            if (inputSourceFolderCheck.ToLower() == "yes" || inputSourceFolderCheck.ToLower()=="y")
             {
                 reportShelfmarkCheckStatus = true;
             }
             Console.WriteLine("Run shelfmark protected character check? yes/no");
             String inputSMCharCheck = Console.ReadLine();
-            if (inputSMCharCheck.ToLower() == "yes")
+            if (inputSMCharCheck.ToLower() == "yes" || inputSMCharCheck.ToLower() == "y")
             {
                 runShelfmarkCharacterChecks = true;
             }
             Console.WriteLine("Generate image order CSV and perform ALTO XML checks? yes/no");
             String inputImageOrderGen = Console.ReadLine();
-            if (inputImageOrderGen.ToLower() == "yes")
+            if (inputImageOrderGen.ToLower() == "yes" || inputImageOrderGen.ToLower() == "y")
             {
                 runImageOrderGenerationXMLChecks = true;
             }
             Console.WriteLine("Run query against descriptive metadata APIs? yes/no");
             String inputMDAPIQuery = Console.ReadLine();
-            if (inputMDAPIQuery.ToLower() == "yes")
+            if (inputMDAPIQuery.ToLower() == "yes" || inputMDAPIQuery.ToLower()=="y")
             {
                 queryMetadata = true;
             }
@@ -276,17 +277,19 @@ namespace HMDSharepointChecker
                     // Add columns for XML checking
                     String SharePointColumnXMLCheck = "ALTOXMLCheck";
                     Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
-
+                    
                 }
+                Console.WriteLine("=======================================\nQuerying metadata APIs to retrieve child shelfmark information...\n=======================================");
+                var iamsRecords = LibraryAPIs.queryMetadataAPIs(spURL, "Digitisation Workflow", SourceFolderStatus);
 
-                var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow");
+                var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow",iamsRecords);
                 Assert.IsNotNull(allShelfmarkFiles);
 
             }
 
             if (queryMetadata)
             {
-                LibraryAPIs.queryMetadataAPIs(SourceFolderStatus);
+                LibraryAPIs.queryMetadataAPIs(spURL,"Digitisation Workflow",SourceFolderStatus);
             }
             // ======================================================================
 
