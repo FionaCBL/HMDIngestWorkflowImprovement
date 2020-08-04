@@ -758,7 +758,7 @@ namespace HMDSharepointChecker
                                                 else if (i == Int32.Parse(listEnd))
                                                 {
                                                     fullShelfmarkRange.Add(i.ToString() + 'r');
-                                                    if (listStartLabel.Contains('v'))
+                                                    if (listEndLabel .Contains('v'))
                                                     {
                                                         fullShelfmarkRange.Add(i.ToString() + 'v');
                                                     }
