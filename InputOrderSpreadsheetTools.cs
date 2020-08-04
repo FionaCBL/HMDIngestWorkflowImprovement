@@ -43,7 +43,7 @@ namespace HMDSharepointChecker
     }
     class InputOrderSpreadsheetTools
     {
-        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList)
+        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList, List<LibraryAPIs.IamsItem> iamsRecords)
         {
             List<List<FileLabels>> allShelfmarkTIFAndLabels = new List<List<FileLabels>>();
             Console.WriteLine("=======================================\nGenerating image order csv and performing ALTOXML checks...\n=======================================");
@@ -161,7 +161,15 @@ namespace HMDSharepointChecker
                                                           // do you need this?
 
                         // to-do: turn the below stuff into a class of its own
-                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder);
+                        List<String> childShelfmarks = new List<String>();
+                        foreach(var iamsItem in iamsRecords)
+                        {
+                            if (iamsItem.SharepointID == itemID)
+                            {
+                                childShelfmarks = iamsItem.ChildRecordTitles;
+                            }
+                        }
+                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder,childShelfmarks);
                         // shelfmarkLabels is a list of FileLabels objects
                         // each FileLabels object corresponds to a single file and contains:
                         // filename
@@ -190,15 +198,6 @@ namespace HMDSharepointChecker
                                 {
                                     testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
                                 }
-
-                                // If we've got a folder with shelfmark/tiffs then the above line will mess things up
-                                // Fix them again with this line
-                                //if (testTifFolder.ToUpper().ToLower().Contains("\\tif"))
-                                //{
-                                //    testTifFolder = "\\" + folderShelfmark;
-                                //    testTifFolder += tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
-
-                                //}
                                 else
                                 {
                                     testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
@@ -241,8 +240,50 @@ namespace HMDSharepointChecker
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine("Error writing ImageOrder.csv for shelfmark {0} in folder {1}.\nException {2}",shelfmark,tifFolder,ex);
+                                Console.WriteLine("Error writing ImageOrder.csv for shelfmark {0} in folder {1}.\nThis could be a folder permissions issue.\nWriting image order CSV to folder on your desktop...",shelfmark,tifFolder);
+                                string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
 
+                                string SM_folderFormat = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+
+                                string folderShelfmark = shelfmark.ToLower().Replace(@" ", @"_").Replace(@"/", @"!").Replace(@".", @"_").Replace(@"*", @"~");
+                                try
+                                {
+                                    string testTifFolder = string.Empty;
+                                    var tifFolderItems = tifFolder.Split('\\');
+
+                                    if (Regex.Matches(tifFolder, folderShelfmark).Count > 1)
+
+                                    {
+                                        testTifFolder = tifFolder.Split(new string[] { folderShelfmark }, 2, StringSplitOptions.None)[1];
+                                    }
+                                    else
+                                    {
+                                        testTifFolder = tifFolderItems[tifFolderItems.Length - 2] + "\\" + tifFolderItems[tifFolderItems.Length - 1];
+                                    }
+                                    outFolder += testTifFolder;
+                                    var last = tifFolderItems[tifFolderItems.Length - 1];
+                                    var secondLast = tifFolderItems[tifFolderItems.Length - 1];
+
+                                    if (!Directory.Exists(outFolder))
+                                    {
+                                        Directory.CreateDirectory(outFolder);
+                                    }                        // Now write this to a CSV
+
+                                    Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                }
+                                catch
+                                {
+                                    Console.WriteLine("Couldn't set the proper output ImageOrder.csv folder path");
+                                    outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                    outFolder += @"\HMDSharepoint_ImgOrderCSVs" + @"\" + SM_folderFormat;
+                                    if (!Directory.Exists(outFolder))
+                                    {
+                                        Directory.CreateDirectory(outFolder);
+                                    }                        // Now write this to a CSV
+
+                                    Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, outFolder));
+                                }
                             }
 
                         }
@@ -363,7 +404,7 @@ namespace HMDSharepointChecker
             // For all shelfmarks this is then List<List<FileLabels>>
         }
 
-        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders)
+        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders, List<String> childShelfmarks)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
@@ -625,6 +666,11 @@ namespace HMDSharepointChecker
                     foreach (string fname in cFolios)
                     {
                         FileLabels folioLabels = new FileLabels();
+
+                        foreach (var shelfmarkRange in childShelfmarks)
+                        {
+                            var thisThing = shelfmarkRange;
+                        }
 
                         List<String> fmat = new List<String>();
                         string[] split = fname.Split('.');

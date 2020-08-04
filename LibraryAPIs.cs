@@ -85,7 +85,7 @@ namespace HMDSharepointChecker
 
         static public readonly string IAMSURL = @"http://v12l-iams3/IAMSRestAPILive/api/archive/GetRecordByreference?reference=";
 
-        public static bool queryMetadataAPIs (String spURL,String spList,List<HMDObject> itemList)
+        public static List<IamsItem> queryMetadataAPIs (String spURL,String spList,List<HMDObject> itemList)
         {
             // This function makes sure that you aren't querying Aleph for manuscripts, or similar
             List<IamsItem> IAMSRecords = new List<IamsItem>();
@@ -111,6 +111,7 @@ namespace HMDSharepointChecker
                 {
                     var IAMSitem = GetIAMSRecords(item);
                     IAMSRecords.Add(IAMSitem);
+
                 }
 
             }
@@ -134,7 +135,15 @@ namespace HMDSharepointChecker
                         }
                         SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
                         SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        if (iamsItem.ChildRecordTitles.Count > 0)
+                        {
+                            foreach (var childRecord in iamsItem.ChildRecordTitles)
+                            {
+                                var recordTitle = childRecord;
+                            }
+                        }
                     }
+
                     catch (Exception ex)
                     {
                         Console.WriteLine("Problem writing IAMS catalogue status. \nException {0}", ex);
@@ -170,11 +179,13 @@ namespace HMDSharepointChecker
                 
             }
 
-                return !ferror;
+                return IAMSRecords;
         }
 
         public static IamsItem GetIAMSRecords(HMDObject item)
         {
+
+            // Remember to get the list of child records and pass this back to the image order csv somehow...
             String shelfmark = item.Shelfmark;
             String itemID = null;
 
