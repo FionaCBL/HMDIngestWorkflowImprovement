@@ -421,8 +421,9 @@ namespace HMDSharepointChecker
                 string fNameString = "AlephRecords";
                 string outPath = outFolder + @"\" + fNameString + ".csv";
 
-                if (File.Exists(outPath))
+                if (!File.Exists(outPath)) // only write once per aleph system number...
                 {
+                    /*
                     String lastModified = File.GetLastWriteTime(outPath).ToString("yyyyMMdd_HH-mm-ss");
                     string oldFilePath = outFolder + @"\" + fNameString + "_" + lastModified + ".csv";
 
@@ -436,30 +437,32 @@ namespace HMDSharepointChecker
                         Console.WriteLine("Could not move existing AlephRecords.csv from {0} to {1}.\nException: {2}", outPath, oldFilePath, ex);
                     }
 
-                }
+                    // }
+                    */
 
 
-                using (var sr = new StreamWriter(outPath, false, uce))
-                {
-                    using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
+                    using (var sr = new StreamWriter(outPath, false, uce))
                     {
-                        csvFile.Configuration.Delimiter = "\t";
-                        //csvFile.Configuration.HasExcelSeparator = true;
+                        using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
+                        {
+                            csvFile.Configuration.Delimiter = "\t";
+                            //csvFile.Configuration.HasExcelSeparator = true;
 
-                        foreach (var header in strHeaders)
-                        {
-                            csvFile.WriteField(header);
-                        }
-                        csvFile.NextRecord(); // skips to next line...
-                        var fieldCounter = 0;
-                        foreach (var record in AlephRecords)
-                        {
-                            csvFile.WriteField(record.FieldValue); // field value
-                            fieldCounter += 1;
-                            var lastRecord = AlephRecords[AlephRecords.Count - 1].FieldValue;
-                            if (fieldCounter >= strHeaders.Count)
+                            foreach (var header in strHeaders)
                             {
-                                csvFile.NextRecord();
+                                csvFile.WriteField(header);
+                            }
+                            csvFile.NextRecord(); // skips to next line...
+                            var fieldCounter = 0;
+                            foreach (var record in AlephRecords)
+                            {
+                                csvFile.WriteField(record.FieldValue); // field value
+                                fieldCounter += 1;
+                                var lastRecord = AlephRecords[AlephRecords.Count - 1].FieldValue;
+                                if (fieldCounter >= strHeaders.Count)
+                                {
+                                    csvFile.NextRecord();
+                                }
                             }
                         }
                     }
