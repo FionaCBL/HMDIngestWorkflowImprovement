@@ -48,13 +48,13 @@ namespace HMDSharepointChecker
         {
             string spURL = "";
             string project = "";
-            if (env == "prod")
+            if (env.Equals("prod"))
             {
                 spURL = "http://hmd.sharepoint.ad.bl.uk";
                 project = "Zoroastrian Manuscripts";
             }
 
-            else if (env == "test")
+            else if (env.Equals("test"))
             {
                 spURL = "http://v12t-sp13wfe1:88/";
                 //project = "Zoroastrian Manuscripts";
@@ -71,240 +71,308 @@ namespace HMDSharepointChecker
         }
         static void Main(string[] args)
         {
-            var startTime = DateTime.Now;
+            bool runProgram = true;
 
-            // Set the environment (use 'test' or 'prod')
-            var env = "test";
-            bool debug = false;
-
-            Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
-            String inputEnv = Console.ReadLine();
-            if (inputEnv.ToLower() == "yes" || inputEnv.ToLower()=="y")
+            while (runProgram)
             {
-                env = "prod";
-            }
-            
 
-            // do initial setup
-            Dictionary<String, String> variablesDictionary = InitialSetup(env);
-            Assert.IsNotNull(variablesDictionary); // Check we set the variables properly
-            var spURL = variablesDictionary["spURL"];
-            var project = variablesDictionary["project"];
-            String inputVariable = "";
-            Assert.IsTrue(RunInitialTests(spURL));
+                var startTime = DateTime.Now;
 
-            Console.WriteLine("This program searches sharepoint using either projects or individual shelfmarks. Use shelfmarks? (yes/no)");
-            String useShelfmarksYN = Console.ReadLine();
-            if (useShelfmarksYN.ToLower() == "yes" || useShelfmarksYN.ToLower() == "y")
-            {
-                Console.WriteLine("Enter a shelfmark name (must match Sharepoint site)");
-                String inputSingleShelfmark = Console.ReadLine();
-                if (inputSingleShelfmark.Length > 0)
+                // Set the environment (use 'test' or 'prod')
+                var env = "test";
+                bool debug = false;
+
+                Console.WriteLine("You are currently running {0}. Switch to prod? yes/no", env);
+                String inputEnv = Console.ReadLine();
+                if (inputEnv.ToLower().Equals("yes") || inputEnv.ToLower().Equals("y"))
                 {
-                    inputVariable = @"<FieldRef Name ='Title'/><Value Type = 'Text'>" + inputSingleShelfmark + @"</Value>";
-                }
-                else // kick it back and use defaults if nothing provided
-                {
-                    Console.WriteLine("No shelfmark provided! Using default project");
-                    inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
+                    env = "prod";
                 }
 
-            }
-            else
-            {
 
-                Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
-                String inputProjectYN = Console.ReadLine();
-                if (inputProjectYN.ToLower() == "yes" || inputProjectYN.ToLower()=="y")
+                // do initial setup
+                Dictionary<String, String> variablesDictionary = InitialSetup(env);
+                Assert.IsNotNull(variablesDictionary); // Check we set the variables properly
+                var spURL = variablesDictionary["spURL"];
+                var project = variablesDictionary["project"];
+                List<String> inputVariable = new List<string>();
+                Assert.IsTrue(RunInitialTests(spURL));
+
+                Console.WriteLine("This program searches sharepoint using either the 'Project' field or the 'Shelfmark' field.\nShelfmarks can be used individually or provided in a shelfmarks.txt file in this folder, with one shelfmark per line.\nUse shelfmarks? (yes/no)");
+                String useShelfmarksYN = Console.ReadLine();
+                if (useShelfmarksYN.ToLower().Equals("yes") || useShelfmarksYN.ToLower().Equals("y"))
                 {
-                    Console.WriteLine("Type a project name (must match sharepoint record)", project);
-                    String inputProject = Console.ReadLine();
-                    if (inputProject.Length > 0)
+                    Console.WriteLine("Use list of shelfmarks? (yes/no)");
+                    String inputShelfmarkList = Console.ReadLine();
+                    if (inputShelfmarkList.ToLower().Equals("yes") || inputShelfmarkList.ToLower().Equals("y"))
                     {
-                        inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + inputProject + @"</Value>";
+                        Console.WriteLine("Searching for 'shelfmarks.txt' file in current folder...");
+                        var currentDir = Directory.GetCurrentDirectory();
+                        var shelfmark_list_path = currentDir + "\\shelfmarks.txt";
 
-                    }
-                    else
-                    {
-                        Console.WriteLine("No project provided! Using default project.");
-                        inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
-
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Using default project {0}",project);
-                    inputVariable = @"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>";
-
-                }
-            }
-
-            // Check we assigned something to the input variable
-            Assert.AreNotEqual(0, inputVariable.Length);
-
-            //===================== Checks to run ====================
-            bool reportShelfmarkCheckStatus = false;
-            bool runShelfmarkCharacterChecks = false;
-            bool runImageOrderGenerationXMLChecks = false;
-            bool queryMetadata = false;
-
-
-            Console.WriteLine("Run shelfmark source folder checks? yes/no");
-            String inputSourceFolderCheck = Console.ReadLine();
-            if (inputSourceFolderCheck.ToLower() == "yes" || inputSourceFolderCheck.ToLower()=="y")
-            {
-                reportShelfmarkCheckStatus = true;
-            }
-            Console.WriteLine("Run shelfmark protected character check? yes/no");
-            String inputSMCharCheck = Console.ReadLine();
-            if (inputSMCharCheck.ToLower() == "yes" || inputSMCharCheck.ToLower() == "y")
-            {
-                runShelfmarkCharacterChecks = true;
-            }
-            Console.WriteLine("Generate image order CSV and perform ALTO XML checks? yes/no");
-            String inputImageOrderGen = Console.ReadLine();
-            if (inputImageOrderGen.ToLower() == "yes" || inputImageOrderGen.ToLower() == "y")
-            {
-                runImageOrderGenerationXMLChecks = true;
-            }
-            Console.WriteLine("Run query against descriptive metadata APIs? yes/no");
-            String inputMDAPIQuery = Console.ReadLine();
-            if (inputMDAPIQuery.ToLower() == "yes" || inputMDAPIQuery.ToLower()=="y")
-            {
-                queryMetadata = true;
-            }
-            // =======================================================
-
-
-
-
-            // Get the 'Digitisation Workflow' list fields and print them out:
-            if (debug)
-            {
-                var DigitisationWorkflowTitles = SharepointTools.GetSharePointListFields(spURL, "Digitisation Workflow");
-                Assert.IsNotNull(DigitisationWorkflowTitles.Count);
-            }
-
-            // ============== Preliminary stuff - has to be run every time ================
-            // This is the "grab all the info from sharepoint" part of things
-
-            // Get the contents of the "ID", "Shelfmark" and "Source Folder" columns in the 'Digitisation Workflow' list
-            var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListFieldContents(spURL, "Digitisation Workflow",env,inputVariable);
-            if(DigitisationWorkflow_ID_Title_SourceFolders.Count < 1)
-            {
-                Console.ReadKey();
-                return;
-            }
-
-            //  Check source folders - requires the above two lines to work
-            var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
-            Assert.IsNotNull(SourceFolderStatus.Count);
-            if (debug)
-            {
-                Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus, "sourceFolderStatus"));
-            }
-
-            // =============================================================================
-
-            // ================= Optional checks - some take ~10 mins to read all of sharepoint, so don't run every time =============
-            
-            // Validates that the value of the 'Source Folder' field exists as a valid path on the network
-            // Attempts to write the results to a sharepoint column for each row (== shelfmark)
-            if (reportShelfmarkCheckStatus)
-            {
-                Console.WriteLine("Writing source folder validation status to Sharepoint...");
-                String SharePointSourceFolderCheck = "SourceFolderValid";
-                Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointSourceFolderCheck));
-                Assert.IsTrue(SharepointTools.ReportSourceFolderStatus(spURL, "Digitisation Workflow", SharePointSourceFolderCheck, SourceFolderStatus));
-            }
-
-            // Checks for protected characters in Shelfmark names 
-            // Attempts to write the results to sharepoint column
-            if (runShelfmarkCharacterChecks)
-            {
-                Console.WriteLine("=======================================\nChecking shelfmarks for protected characters\n=======================================");
-                // Add in Shelfmark protected chars check here
-                String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
-                Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
-                List<HMDObject> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
-                String shelfmarkCharacterStatus = "";
-
-                var thisItem = 1;
-                
-                foreach (var item in badShelfmarks)
-                {
-                    if (badShelfmarks.Count > 20)
-                    {
-                        if (thisItem % 10 == 0)
+                        if (System.IO.File.Exists(shelfmark_list_path))
                         {
-                            Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
+                            Console.WriteLine("Found shelfmarks.txt file in current folder!");
+                            foreach (var line in System.IO.File.ReadLines(shelfmark_list_path))
+                            {
+                                inputVariable.Add(@"<FieldRef Name ='Title'/><Value Type = 'Text'>" + line + @"</Value>");
+                            }
+
+
+                        }
+                        else
+                        {
+                            Console.WriteLine("Could not find file 'shelfmarks.txt' in current folder. Using single shelfmark...");
+                            Console.WriteLine("Enter a shelfmark name (must match Sharepoint site)");
+                            String inputSingleShelfmark = Console.ReadLine();
+                            if (inputSingleShelfmark.Length > 0)
+                            {
+                                inputVariable.Add(@"<FieldRef Name ='Title'/><Value Type = 'Text'>" + inputSingleShelfmark + @"</Value>");
+                            }
+                            else // kick it back and use defaults if nothing provided
+                            {
+                                Console.WriteLine("No shelfmark provided! Using default project");
+                                inputVariable.Add(@"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>");
+                            }
                         }
                     }
                     else
                     {
-                        Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
 
+                        Console.WriteLine("Enter a shelfmark name (must match Sharepoint site)");
+                        String inputSingleShelfmark = Console.ReadLine();
+                        if (inputSingleShelfmark.Length > 0)
+                        {
+                            inputVariable.Add(@"<FieldRef Name ='Title'/><Value Type = 'Text'>" + inputSingleShelfmark + @"</Value>");
+                        }
+                        else // kick it back and use defaults if nothing provided
+                        {
+                            Console.WriteLine("No shelfmark provided! Using default project");
+                            inputVariable.Add(@"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>");
+                        }
                     }
-                    thisItem += 1;
-                    var ID = item.ID;
-                    String SM = item.Shelfmark;
-                    if (item.BadShelfmark)
+                }
+                else
+                {
+
+                    Console.WriteLine("Project is currently set to {0}, change this? (yes/no)", project);
+                    String inputProjectYN = Console.ReadLine();
+                    if (inputProjectYN.ToLower().Equals("yes") || inputProjectYN.ToLower().Equals("y"))
                     {
-                        shelfmarkCharacterStatus = "Protected character(s) found";
+                        Console.WriteLine("Type a project name (must match sharepoint record)", project);
+                        String inputProject = Console.ReadLine();
+                        if (inputProject.Length > 0)
+                        {
+                            inputVariable.Add(@"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + inputProject + @"</Value>");
+
+                        }
+                        else
+                        {
+                            Console.WriteLine("No project provided! Using default project.");
+                            inputVariable.Add(@"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>");
+
+                        }
                     }
                     else
                     {
-                        shelfmarkCharacterStatus = "Valid";
+                        Console.WriteLine("Using default project {0}", project);
+                        inputVariable.Add(@"<FieldRef Name ='Project_x0020_Name'/><Value Type = 'Text'>" + project + @"</Value>");
 
                     }
-                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, shelfmarkCharacterStatus));
                 }
-                
 
-            }
+                // Check we assigned something to the input variable
+                Assert.AreNotEqual(0, inputVariable.Count);
 
-            // Get the labels (image order, image type etc) for all shelfmarks passed into this function
-            // Write these out in an image order csv 
+                //===================== Checks to run ====================
+                bool reportShelfmarkCheckStatus = false;
+                bool runShelfmarkCharacterChecks = false;
+                bool runImageOrderGenerationXMLChecks = false;
+                bool queryMetadata = false;
 
 
-            // Also runs ALTO XML checks - do they exist with the same names as TIFs and in the same number as TIFs?
-            // Are they version 2.0 or older?
-            if (runImageOrderGenerationXMLChecks)
-            {
-                bool addColumns = false;
-                if (addColumns)
+                Console.WriteLine("Run shelfmark source folder checks? yes/no");
+                String inputSourceFolderCheck = Console.ReadLine();
+                if (inputSourceFolderCheck.ToLower().Equals("yes") || inputSourceFolderCheck.ToLower().Equals("y"))
                 {
-                    // Add columns for XML checking
-                    String SharePointColumnXMLCheck = "ALTOXMLCheck";
-                    Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
-                    
+                    reportShelfmarkCheckStatus = true;
                 }
-                Console.WriteLine("=======================================\nQuerying metadata APIs to retrieve child shelfmark information...\n=======================================");
-                var iamsRecords = LibraryAPIs.queryMetadataAPIs(spURL, "Digitisation Workflow", SourceFolderStatus);
+                Console.WriteLine("Run shelfmark protected character check? yes/no");
+                String inputSMCharCheck = Console.ReadLine();
+                if (inputSMCharCheck.ToLower().Equals("yes") || inputSMCharCheck.ToLower().Equals("y"))
+                {
+                    runShelfmarkCharacterChecks = true;
+                }
+                Console.WriteLine("Generate image order CSV and perform ALTO XML checks? yes/no");
+                String inputImageOrderGen = Console.ReadLine();
+                if (inputImageOrderGen.ToLower().Equals("yes")|| inputImageOrderGen.ToLower().Equals("y"))
+                {
+                    runImageOrderGenerationXMLChecks = true;
+                }
+                Console.WriteLine("Run query against descriptive metadata APIs? yes/no");
+                String inputMDAPIQuery = Console.ReadLine();
+                if (inputMDAPIQuery.ToLower().Equals("yes") || inputMDAPIQuery.ToLower().Equals("y"))
+                {
+                    queryMetadata = true;
+                }
+                // =======================================================
 
-                var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow",iamsRecords);
-                Assert.IsNotNull(allShelfmarkFiles);
+
+
+
+                // Get the 'Digitisation Workflow' list fields and print them out:
+                if (debug)
+                {
+                    var DigitisationWorkflowTitles = SharepointTools.GetSharePointListFields(spURL, "Digitisation Workflow");
+                    Assert.IsNotNull(DigitisationWorkflowTitles.Count);
+                }
+
+                // ============== Preliminary stuff - has to be run every time ================
+                // This is the "grab all the info from sharepoint" part of things
+
+                // Get the contents of the "ID", "Shelfmark" and "Source Folder" columns in the 'Digitisation Workflow' list
+
+                try
+                {
+                    for (int counter = 0; counter < inputVariable.Count; ++counter)
+                    {
+                        var inputVar = inputVariable[counter];
+                        Console.WriteLine("Processing input {0} of {1}", counter+1, inputVariable.Count);
+
+
+                        var DigitisationWorkflow_ID_Title_SourceFolders = SharepointTools.GetSharePointListFieldContents(spURL, "Digitisation Workflow", env, inputVar);
+                        if (DigitisationWorkflow_ID_Title_SourceFolders.Count < 1)
+                        {
+                            continue; // goes on to next input...
+                        }
+
+                        //  Check source folders - requires the above two lines to work
+                        var SourceFolderStatus = SharepointTools.CheckSourceFolderExists(DigitisationWorkflow_ID_Title_SourceFolders);
+                        Assert.IsNotNull(SourceFolderStatus.Count);
+                        if (debug)
+                        {
+                            Assert.IsTrue(TextOutputFunctions.OutputListOfLists(SourceFolderStatus, "sourceFolderStatus"));
+                        }
+
+                        // =============================================================================
+
+                        // ================= Optional checks - some take ~10 mins to read all of sharepoint, so don't run every time =============
+
+                        // Validates that the value of the 'Source Folder' field exists as a valid path on the network
+                        // Attempts to write the results to a sharepoint column for each row (== shelfmark)
+                        if (reportShelfmarkCheckStatus)
+                        {
+                            Console.WriteLine("Writing source folder validation status to Sharepoint...");
+                            String SharePointSourceFolderCheck = "SourceFolderValid";
+                            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointSourceFolderCheck));
+                            Assert.IsTrue(SharepointTools.ReportSourceFolderStatus(spURL, "Digitisation Workflow", SharePointSourceFolderCheck, SourceFolderStatus));
+                        }
+
+                        // Checks for protected characters in Shelfmark names 
+                        // Attempts to write the results to sharepoint column
+                        if (runShelfmarkCharacterChecks)
+                        {
+                            Console.WriteLine("=======================================\nChecking shelfmarks for protected characters\n=======================================");
+                            // Add in Shelfmark protected chars check here
+                            String SharePointColumnShelfmarkCheck = "ShelfmarkCheck";
+                            Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck));
+                            List<HMDObject> badShelfmarks = SharepointTools.BadShelfmarkNames(SourceFolderStatus);
+                            String shelfmarkCharacterStatus = "";
+
+                            var thisItem = 1;
+
+                            foreach (var item in badShelfmarks)
+                            {
+                                if (badShelfmarks.Count > 20)
+                                {
+                                    if (thisItem % 10 == 0)
+                                    {
+                                        Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("{0}/{1}", thisItem, badShelfmarks.Count);
+
+                                }
+                                thisItem += 1;
+                                var ID = item.ID;
+                                String SM = item.Shelfmark;
+                                if (item.BadShelfmark)
+                                {
+                                    shelfmarkCharacterStatus = "Protected character(s) found";
+                                }
+                                else
+                                {
+                                    shelfmarkCharacterStatus = "Valid";
+
+                                }
+                                Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, "Digitisation Workflow", SharePointColumnShelfmarkCheck, SM, ID, shelfmarkCharacterStatus));
+                            }
+
+
+                        }
+
+                        // Get the labels (image order, image type etc) for all shelfmarks passed into this function
+                        // Write these out in an image order csv 
+
+
+                        // Also runs ALTO XML checks - do they exist with the same names as TIFs and in the same number as TIFs?
+                        // Are they version 2.0 or older?
+                        if (runImageOrderGenerationXMLChecks)
+                        {
+                            bool addColumns = false;
+                            if (addColumns)
+                            {
+                                // Add columns for XML checking
+                                String SharePointColumnXMLCheck = "ALTOXMLCheck";
+                                Assert.IsTrue(SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", SharePointColumnXMLCheck));
+
+                            }
+                            Console.WriteLine("=======================================\nQuerying metadata APIs to retrieve child shelfmark information...\n=======================================");
+                            var iamsRecords = LibraryAPIs.queryMetadataAPIs(spURL, "Digitisation Workflow", SourceFolderStatus);
+
+                            var allShelfmarkFiles = InputOrderSpreadsheetTools.listAllShelfmarkFilesTIFXML(SourceFolderStatus, env, spURL, "Digitisation Workflow", iamsRecords);
+                            Assert.IsNotNull(allShelfmarkFiles);
+
+                        }
+
+                        if (queryMetadata)
+                        {
+                            LibraryAPIs.queryMetadataAPIs(spURL, "Digitisation Workflow", SourceFolderStatus);
+                        }
+                        // ======================================================================
+
+                        // Deprecated?
+                        // var sourceFolderXMLFiles = SharepointTools.GetSourceFolderXMLs(SourceFolderStatus, true);
+                        //Assert.IsNotNull(sourceFolderXMLFiles);
+
+
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error while processing query.\n Exception: {0}", ex);
+                }
+
+                TimeSpan ts = DateTime.Now - startTime;
+                var runTime = ts.TotalSeconds.ToString();
+                Console.WriteLine("=======================================\nFinished in {0} seconds\n=======================================", runTime);
+                Console.WriteLine("Perform another query? (yes/no)");
+                String restartProgram = Console.ReadLine();
+
+                if (restartProgram.ToLower().Equals("no") || restartProgram.ToLower().Equals("n"))
+                {
+                    Console.WriteLine("Press any key to exit.");
+                    Console.ReadKey();
+                    runProgram = false;
+                }
+                Console.Clear();
 
             }
 
-            if (queryMetadata)
-            {
-                LibraryAPIs.queryMetadataAPIs(spURL,"Digitisation Workflow",SourceFolderStatus);
-            }
-            // ======================================================================
 
-            // Deprecated?
-            // var sourceFolderXMLFiles = SharepointTools.GetSourceFolderXMLs(SourceFolderStatus, true);
-            //Assert.IsNotNull(sourceFolderXMLFiles);
-
-            TimeSpan ts = DateTime.Now - startTime;
-            var runTime = ts.TotalSeconds.ToString();
-            Console.WriteLine("=======================================\nFinished in {0} seconds\n=======================================",runTime);
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
-
-
-            return;            
+                return;
         }
 
     }
