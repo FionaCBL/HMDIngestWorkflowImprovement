@@ -46,7 +46,7 @@ namespace HMDSharepointChecker
     }
     class InputOrderSpreadsheetTools
     {
-        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList, List<LibraryAPIs.IamsItem> iamsRecords)
+        public static List<List<FileLabels>> listAllShelfmarkFilesTIFXML(List<HMDObject> sharepointOut, String env, String spURL, String spList, List<LibraryAPIs.IamsItem> iamsRecords, bool writeSP)
         {
             List<List<FileLabels>> allShelfmarkTIFAndLabels = new List<List<FileLabels>>();
             Console.WriteLine("=======================================\nGenerating image order csv and performing ALTOXML checks...\n=======================================");
@@ -172,7 +172,7 @@ namespace HMDSharepointChecker
                                 childShelfmarks = iamsItem.ChildRecordTitles;
                             }
                         }
-                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder,childShelfmarks);
+                        shelfmarkLabels = mapFileNameToLabels(spURL,spList,shelfmark,itemID,Files, tifFolder,childShelfmarks,writeSP);
                         // shelfmarkLabels is a list of FileLabels objects
                         // each FileLabels object corresponds to a single file and contains:
                         // filename
@@ -241,7 +241,7 @@ namespace HMDSharepointChecker
                                     Assert.IsTrue(writeFileLabelsToCSV(shelfmarkLabels, tifFolder));
                         
                             }
-                            catch (Exception ex)
+                            catch 
                             {
                                 string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                                 outFolder += @"\HMDSharepoint_ImgOrderCSVs\";
@@ -341,8 +341,11 @@ namespace HMDSharepointChecker
                             {
                                 if (env == "test")
                                 {
-                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, xmlErrMessage));
-                                }
+                                    if (writeSP)
+                                    {
+                                        Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, xmlErrMessage));
+                                    }
+                                    }
                                 else if (env == "prod")
                                 {
                                     Console.WriteLine("Holding off on populting columns in Sharepoint prod version for now");
@@ -352,8 +355,11 @@ namespace HMDSharepointChecker
                             { // nothing wrong, just write an valid status
                                 if (env == "test")
                                 {
-                                    Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, "Valid"));
+                                    if (writeSP)
+                                    {
 
+                                        Assert.IsTrue(SharepointTools.WriteToSharepointColumnByID(spURL, spList, "ALTOXMLCheck", shelfmark, itemID, "Valid"));
+                                    }
                                 }
                             }
 
@@ -407,7 +413,7 @@ namespace HMDSharepointChecker
             // For all shelfmarks this is then List<List<FileLabels>>
         }
 
-        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders, List<String> childShelfmarks)
+        private static List<FileLabels> mapFileNameToLabels(String spURL, string spList,String inputShelfmark, String itemID, FileInfo[] Files, String tifFolders, List<String> childShelfmarks, bool writeSP)
         {
 
             // Order labels will take a couple of sweeps - one to get front and back matter and then another to do a fine sort of the front and back matter
@@ -1154,14 +1160,19 @@ namespace HMDSharepointChecker
                     {
                         message += "; Non-consecutive filenames";
                     }
-                    try
+                    if (writeSP)
                     {
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        try
+                        {
+
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
+
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        }
                     }
                 }
                 else if (!dipsCompliant)
@@ -1169,28 +1180,36 @@ namespace HMDSharepointChecker
                     Console.WriteLine("{0} contains filenames that do not meet DIPS standards", folderDerivedShelfmark);
                     String columnName = "DIPS_Compliance";
                     String message = "Invalid filenames";
-                    try
+                    if (writeSP)
                     {
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+
+                        try
+                        {
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        }
                     }
                 }
                 else // Things are good!
                 {
                     String columnName = "DIPS_Compliance";
                     String message = "Full";
-                    try
+                    if (writeSP)
                     {
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+
+                        try
+                        {
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        }
                     }
 
                 }
@@ -1279,16 +1298,19 @@ namespace HMDSharepointChecker
 
                     String columnName = "DIPS_Compliance";
                     String message = "Full (numeric)";
-                    try
+                    if (writeSP)
                     {
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
-                    }
 
+                        try
+                        {
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        }
+                    }
                 }
                 else
                 {
@@ -1298,14 +1320,17 @@ namespace HMDSharepointChecker
                     {
                         message += "; Non-consecutive filenames";
                     }
-                    try
+                    if (writeSP)
                     {
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        try
+                        {
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Problem writing file-level DIPS compliance status to sharepoint for shelfmark {0}. \nException {1}", theShelfmark, ex);
+                        }
                     }
                 }
 

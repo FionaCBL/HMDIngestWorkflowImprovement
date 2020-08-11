@@ -85,7 +85,7 @@ namespace HMDSharepointChecker
 
         static public readonly string IAMSURL = @"http://v12l-iams3/IAMSRestAPILive/api/archive/GetRecordByreference?reference=";
 
-        public static List<IamsItem> queryMetadataAPIs (String spURL,String spList,List<HMDObject> itemList)
+        public static List<IamsItem> queryMetadataAPIs (String spURL,String spList,List<HMDObject> itemList, bool writeToSharepoint)
         {
             // This function makes sure that you aren't querying Aleph for manuscripts, or similar
             List<IamsItem> IAMSRecords = new List<IamsItem>();
@@ -130,9 +130,11 @@ namespace HMDSharepointChecker
                         {
                             message = "No";
                         }
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                        
+                        if (writeToSharepoint)
+                        {
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
                     }
 
                     catch (Exception ex)
@@ -153,9 +155,12 @@ namespace HMDSharepointChecker
                         {
                             message = "No";
                         }
-                        SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
-                        SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
-                    
+                        if (writeToSharepoint)
+                        {
+
+                            SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
+                            SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
+                        }
                     }
                     catch (Exception ex)
                     {
