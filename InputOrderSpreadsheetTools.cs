@@ -1370,6 +1370,8 @@ namespace HMDSharepointChecker
                 
                 List<String> strHeaders = new List<string>{"File","Order","Type","Label","","Child Shelfmarks"};
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
+                System.Text.Encoding utf8 = System.Text.Encoding.UTF8; // changed from uce to utf8
+
                 string fNameString = "ImageOrder";
                 string outPath = outFolder + @"\"+fNameString+".csv";
 
@@ -1391,11 +1393,11 @@ namespace HMDSharepointChecker
                 }
                     
 
-                using (var sr = new StreamWriter(outPath, false, uce))
+                using (var sr = new StreamWriter(outPath, false))
                 {
                     using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
                     {
-                        csvFile.Configuration.Delimiter = "\t";
+                        csvFile.Configuration.Delimiter = ",";
                         //csvFile.Configuration.HasExcelSeparator = true;
 
                         foreach (var header in strHeaders)

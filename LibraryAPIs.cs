@@ -423,6 +423,8 @@ namespace HMDSharepointChecker
                 }
 
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
+                System.Text.Encoding utf8 = System.Text.Encoding.UTF8; // changed from uce to utf8
+
                 string fNameString = "AlephRecords";
                 string outPath = outFolder + @"\" + fNameString + ".csv";
 
@@ -446,11 +448,11 @@ namespace HMDSharepointChecker
                     */
 
 
-                    using (var sr = new StreamWriter(outPath, false, uce))
+                    using (var sr = new StreamWriter(outPath, false)) // changed from uce to utf8
                     {
                         using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
                         {
-                            csvFile.Configuration.Delimiter = "\t";
+                            csvFile.Configuration.Delimiter = ",";
                             //csvFile.Configuration.HasExcelSeparator = true;
 
                             foreach (var header in strHeaders)
