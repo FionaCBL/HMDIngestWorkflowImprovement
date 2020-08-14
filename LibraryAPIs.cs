@@ -135,6 +135,20 @@ namespace HMDSharepointChecker
                             SharepointTools.CreateSharepointColumn(spURL, "Digitisation Workflow", columnName);
                             SharepointTools.WriteToSharepointColumnByID(spURL, spList, columnName, theShelfmark, itemID, message);
                         }
+
+                        if(iamsItem.ChildRecordTitles.Count > 0)
+                        {
+                            // write IAMS child record titles to a CSV
+                            string outFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                            outFolder += @"\HMDSharepoint_IamsChildRecords\";
+                            outFolder += iamsItem.ItemShelfmark;
+                            if (!Directory.Exists(outFolder))
+                            {
+                                Directory.CreateDirectory(outFolder);
+                            }
+                            writeIAMSCSV(iamsItem, outFolder);
+
+                        }
                     }
 
                     catch (Exception ex)
@@ -423,6 +437,8 @@ namespace HMDSharepointChecker
                 }
 
                 System.Text.UnicodeEncoding uce = new System.Text.UnicodeEncoding();
+                System.Text.Encoding utf8 = System.Text.Encoding.UTF8; // changed from uce to utf8
+
                 string fNameString = "AlephRecords";
                 string outPath = outFolder + @"\" + fNameString + ".csv";
 
@@ -446,11 +462,11 @@ namespace HMDSharepointChecker
                     */
 
 
-                    using (var sr = new StreamWriter(outPath, false, uce))
+                    using (var sr = new StreamWriter(outPath, false)) // changed from uce to utf8
                     {
                         using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
                         {
-                            csvFile.Configuration.Delimiter = "\t";
+                            csvFile.Configuration.Delimiter = ",";
                             //csvFile.Configuration.HasExcelSeparator = true;
 
                             foreach (var header in strHeaders)
@@ -477,6 +493,67 @@ namespace HMDSharepointChecker
             catch (Exception ex)
             {
                 Console.WriteLine("Error writing CSV File: {0}", ex);
+                fError = true;
+            }
+            return !fError;
+        }
+
+        private static bool writeIAMSCSV(IamsItem iamsRecord, String outFolder)
+        {
+            bool fError = false;
+
+            try // to write the csv...
+            {
+                List<String> strHeaders = new List<string>();
+                
+                strHeaders.Add("Child shelfmarks");
+                
+
+                string fNameString = "IamsRecords";
+                string outPath = outFolder + @"\" + fNameString + ".csv";
+
+                if (!File.Exists(outPath)) // only write once per shelfmark...
+                {
+                    
+                    using (var sr = new StreamWriter(outPath, false)) // changed from uce to utf8
+                    {
+                        using (var csvFile = new CsvHelper.CsvWriter(sr, System.Globalization.CultureInfo.InvariantCulture))
+                        {
+                            csvFile.Configuration.Delimiter = ",";
+                            //csvFile.Configuration.HasExcelSeparator = true;
+
+                            csvFile.WriteField("Shelfmark");
+                            csvFile.WriteField("Item type");
+                            csvFile.WriteField("Catalogue status");
+                            csvFile.NextRecord(); // skips to next line...
+
+                            csvFile.WriteField(iamsRecord.ItemShelfmark);
+                            csvFile.WriteField(iamsRecord.ItemType);
+                            csvFile.WriteField(iamsRecord.CatalogueStatus);
+                            csvFile.NextRecord(); // skips to next line...
+
+
+
+
+                            foreach (var header in strHeaders)
+                            {
+                                csvFile.WriteField(header);
+                            }
+                            csvFile.NextRecord(); // skips to next line...
+                            foreach (var cShelfmark in iamsRecord.ChildRecordTitles)
+                            {
+                                csvFile.WriteField(cShelfmark); // field value
+                                csvFile.NextRecord();
+                             }
+                            
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing IAMS CSV File: {0}", ex);
                 fError = true;
             }
             return !fError;

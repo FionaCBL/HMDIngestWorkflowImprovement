@@ -17,10 +17,13 @@ Image order csv generation in `prod` is untested:
 - Not recommended to test this yet, but if you feel like it then testing on single shelfmarks is the most sensible way forward here.  
 The above does not apply to the `test` environment.
 
-The tool then asks if you would like to search sharepoint using a shelfmark. Answer 'yes' here, followed by your shelfmark of choice (matching Sharepoint exactly!) to use this feature.
+You will be asked if you would like to use an ingest spreadsheet as an input. Select yes/no, and if you would like to use one then make sure you have this in the same directory as the .exe file and that it is called IngestSpreadsheet.xlsx containing a sheet called "PSIP Generator Fields"
+
+The tool then asks if you would like to search sharepoint using a shelfmark. You can use a list of shelfmarks, in a .txt file called 'shelfmarks.txt', or you can use individual shelfmarks. If you answer 'yes' here, followed by your shelfmark of choice (matching Sharepoint exactly!) to use this feature.
 
 You can also select a `project` to run over. The default project is environment-dependent, but the program will tell you what it is currently set to. To change it, type `yes` (then `Enter`) and type the name of the project to analyse. At the moment 
 this is required to match the value in SharePoint exactly.
+
 
 ### Checks
 As far as possible, individual checks are separated and the user is free to choose which checks to run over. 
