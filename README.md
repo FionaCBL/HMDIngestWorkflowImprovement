@@ -28,13 +28,17 @@ this is required to match the value in SharePoint exactly.
 ### Checks
 As far as possible, individual checks are separated and the user is free to choose which checks to run over. 
 
-Three broad checks are available:
+Four broad checks are available:
 - Shelfmark source folder checks
 This checks that the value of `Source Folder` given for an item in SharePoint is a valid path on the BL network and writes the outcome of this check to Sharepoint.
 - Run shelfmark protected character check
 Checks a shelfmark as entered in SharePoint for protected characters that will cause errors further down the workflow. Writes outcome of this check to SharePoint.
 
-- Generates image order CSV and perform ALTO XML checks. Writes to SharePoint if errors are found. Image order csvs are written to a folder on the desktop currently.
+- Generates image order CSV and perform ALTO XML checks 
+Writes to SharePoint if errors are found. Image order csvs are written to a folder on the desktop currently. Queries Iams if relevant to find foliated child shelfmarks and adds these into the image order csv.
+
+- Query library metadata APIs
+Looks the item up on Aleph or Iams, depending on the metadata source field entry in sharepoint. Depending on whether the item comes under the remit of Aleph or Iams, writes a CSV to a folder in the the user's desktop. The folder name uses the item shelfmark within the name.
 
 
 ## For Developers
@@ -44,16 +48,14 @@ The tool is controlled with the [Program.cs](./Program.cs) file, with different 
 - SharepointTools.cs
     - Functions to interact with the HMD sharepoint site
     - Verifies site exists, loads from the digitisation workflow sharepoint list and prints specified fields for each item (shelfmark)
-    - These functions provide an input for the other functions defined in the `.cs` files listed below
-- DirectorySearchTools.cs
-    - Contains functions to list the file contents of folder paths passed as an argument, including option to search recursively
+    - Creates HMDObject items for each object returned from the sharepoint query. These have member functions of shelfmark, ID, system number and so on.
+    - HMDObjects are used as an input for the other functions defined in the `.cs` files listed below
 - InputOrderSpreadsheetTools.cs
     - Contains functions to generate input order CSV file for each shelfmark provided and perform XML checks.
+- LibraryAPIs.cs
+    - Contains functions to query library metadata APIs, return CSV files and write to sharepoint.
 - TextFileOutput.cs
-    - Functions to output text files after running some analysis on items in sharepoint, mainly used for development purposes so far
+    - Functions to output text files after running some analysis on items in sharepoint, used for development purposes.
 - HMDSharepointTests
-    - Project containing various test functions for the software tool.
-
-
-
+    - Various test functions for the software tool, mainly concerned with testing access to the sharepoint site.
 
